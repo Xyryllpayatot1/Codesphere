@@ -1,0 +1,864 @@
+// ---------------------------------------------------------------------------
+// CodeSphere — Learning Management System schema
+//
+// DESIGN NOTES
+// 1. Provider-portable: no enums (String + app-level constants), no
+//    provider-specific types. Works on SQLite (dev) and Postgres (Supabase)
+//    with a one-line provider change + driver adapter swap (see README).
+// 2. Content is stored as structured JSON (content blocks, exercise config,
+//    quiz config, achievement criteria). This keeps lessons fully data-driven
+//    — the renderer/engines never hardcode lessons.
+// 3. Every "write" surface (progress, submissions, attempts) keeps a full
+//    history record so learning analytics are derivable from relational rows.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────── USERS ─────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  bio           String?
+  // STUDENT | INSTRUCTOR | ADMIN
+  role          String   @default("STUDENT")
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  // CodeCoins are the spendable currency — XP is never spent.
+  coins            Int @default(0)
+  totalCoinsEarned Int @default(0)
+  linesOfCode      Int @default(0)
+  // Cosmetic loadout — JSON map of slot -> store item key (see STORE_SLOTS).
+  equipped   Json?
+  titleId    String?
+  title      Title?  @relation("EquippedTitle", fields: [titleId], references: [id], onDelete: SetNull)
+  streak        Int      @default(0)
+  longestStreak Int      @default(0)
+  lastActiveAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  enrollments         Enrollment[]
+  lessonProgress      LessonProgress[]
+  exerciseSubmissions ExerciseSubmission[]
+  quizAttempts        QuizAttempt[]
+  achievements        UserAchievement[]
+  certificates        Certificate[]
+  notifications       Notification[]
+  studySessions       StudySession[]
+  activities          Activity[]
+  projectSubmissions  ProjectSubmission[]
+  studyPlanItems      StudyPlanItem[]
+  settings            UserSetting?
+  authoredCourses     Course[]         @relation("CourseAuthor")
+  uploadedAssets      MediaAsset[]
+  games               GameProgress[]
+  xpTransactions      XpTransaction[]
+  coinTransactions    CoinTransaction[]
+  titles              UserTitle[]
+  purchases           UserPurchase[]
+  missions            UserMission[]
+  worldProgress       UserWorldProgress[]
+  worldCertificates   WorldCertificate[]
+  masteryEvents       MasteryEvent[]
+  networkProjects     NetworkProject[]
+  networkMissionProgress NetworkMissionProgress[]
+}
+
+// ─────────────────────────────── CATALOG ───────────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  color       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  courses Course[]
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  courses Course[]
+}
+
+model Course {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  icon            String?
+  coverImage      String?
+  color           String   @default("#6366f1")
+  // BEGINNER | INTERMEDIATE | ADVANCED
+  difficulty      String   @default("BEGINNER")
+  // Primary code language used to configure the playground (e.g. "html", "javascript")
+  language        String?
+  estimatedHours  Int      @default(0)
+  xpTotal         Int      @default(0)
+  // DRAFT | PUBLISHED | ARCHIVED
+  status          String   @default("DRAFT")
+  authorId        String?
+  author          User?    @relation("CourseAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  // Slugs of courses that must be completed first
+  prerequisiteIds Json?
+  order           Int      @default(0)
+  isFree          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  modules       Module[]
+  lessons       Lesson[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  projects      Project[]
+  activities    Activity[]
+  quizzes       Quiz[]
+  tags          Tag[]
+}
+
+model Module {
+  id               String   @id @default(cuid())
+  courseId         String
+  course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title            String
+  slug             String
+  description      String?
+  order            Int      @default(0)
+  estimatedMinutes Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  lessons Lesson[]
+
+  @@unique([courseId, slug])
+}
+
+// ─────────────────────────────── LESSONS ───────────────────────────────────
+
+model Lesson {
+  id                 String   @id @default(cuid())
+  courseId           String // denormalized for fast per-course queries
+  moduleId           String
+  module             Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title              String
+  slug               String
+  description        String?
+  summary            String?
+  objectives         Json      // string[]
+  // BEGINNER | INTERMEDIATE | ADVANCED
+  difficulty         String   @default("BEGINNER")
+  estimatedMinutes   Int      @default(10)
+  prerequisiteSlugs  Json? // string[] of lesson slugs (soft, in addition to module order)
+  order              Int      @default(0)
+  // Array of content blocks — see src/lib/content/blocks.ts for the schema
+  content            Json   
+  xpReward           Int      @default(20)
+  isPublished        Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  course     Course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  exercises  Exercise[]
+  quizzes    Quiz[]
+  progress   LessonProgress[]
+  activities Activity[]
+
+  @@unique([moduleId, slug])
+  @@index([courseId])
+}
+
+// ─────────────────────────────── EXERCISES ─────────────────────────────────
+
+model Exercise {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  lessonId     String
+  lesson       Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  // code_output | html_structure | css_check | js_function | js_assert |
+  // fill_blank | code_completion | ordering
+  type         String
+  title        String
+  instructions String
+  starterCode  String?
+  solution     String?
+  hints        Json      // string[]
+  // Validation configuration — see src/lib/engine/validation/types.ts
+  config       Json
+  points       Int      @default(10)
+  order        Int      @default(0)
+  isOptional   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submissions ExerciseSubmission[]
+}
+
+model ExerciseSubmission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  exercise    Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  code        String
+  passed      Boolean
+  score       Int      @default(0)
+  attempts    Int      @default(1)
+  feedback    String?
+  submittedAt DateTime @default(now())
+
+  @@unique([userId, exerciseId])
+  @@index([userId])
+}
+
+// ─────────────────────────────── QUIZZES ───────────────────────────────────
+
+model Quiz {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  lessonId    String?
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  courseId    String?
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  passScore   Int      @default(70) // percentage required to pass
+  timeLimit   Int? // minutes, null = unlimited
+  points      Int      @default(50)
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id          String @id @default(cuid())
+  quizId      String
+  quiz        Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  // multiple_choice | true_false | fill_blank | code_completion | ordering | matching
+  type        String
+  prompt      String
+  code        String?
+  explanation String?
+  points      Int    @default(10)
+  // Varies per type: { options, answer, blanks, pairs, sequence, ... }
+  config      Json
+  order       Int    @default(0)
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId      String
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score       Int
+  maxScore    Int
+  passed      Boolean
+  answers     Json    
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([userId, quizId])
+}
+
+// ─────────────────────────────── PROJECTS ──────────────────────────────────
+
+model Project {
+  id           String   @id @default(cuid())
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  slug         String
+  description  String
+  difficulty   String   @default("BEGINNER")
+  requirements Json      // string[]
+  starterCode  String?
+  config       Json      // acceptance check configuration
+  xpReward     Int      @default(100)
+  order        Int      @default(0)
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submissions ProjectSubmission[]
+
+  @@unique([courseId, slug])
+}
+
+model ProjectSubmission {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code        String
+  description String?
+  // SUBMITTED | APPROVED | REJECTED
+  status      String   @default("SUBMITTED")
+  score       Int?
+  feedback    String?
+  submittedAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────── ACHIEVEMENTS ──────────────────────────────────
+
+model Achievement {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  name        String
+  description String
+  icon        String
+  // MILESTONE | STREAK | COURSE | QUIZ | PROJECT | ACTIVITY | SOCIAL
+  category    String  @default("MILESTONE")
+  // COMMON | RARE | EPIC | LEGENDARY | MYTHIC
+  rarity      String  @default("COMMON")
+  xpReward    Int     @default(0)
+  // Rule engine criteria — see src/lib/engine/achievements/criteria.ts
+  criteria    Json
+  secret      Boolean @default(false)
+  order       Int     @default(0)
+  isActive    Boolean @default(true)
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  earnedAt      DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+model Certificate {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  code      String    @unique
+  issuedAt  DateTime  @default(now())
+
+  @@unique([userId, courseId])
+}
+
+// ─────────────────────────────── PROGRESS ──────────────────────────────────
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  // ACTIVE | COMPLETED
+  status      String    @default("ACTIVE")
+  progress    Int       @default(0)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId           String
+  lesson             Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  // NOT_STARTED | IN_PROGRESS | COMPLETED
+  status             String    @default("NOT_STARTED")
+  progressPercent    Int       @default(0)
+  score              Int       @default(0)
+  exercisesCompleted Int       @default(0)
+  exercisesTotal     Int       @default(0)
+  quizzesPassed      Int       @default(0)
+  attempts           Int       @default(0)
+  startedAt          DateTime?
+  completedAt        DateTime?
+  lastAccessedAt     DateTime  @default(now())
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model StudySession {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String?
+  lessonId        String?
+  // lesson | playground | dashboard | project | quiz
+  source          String    @default("lesson")
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationSeconds Int       @default(0)
+
+  @@index([userId, startedAt])
+}
+
+model StudyPlanItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime // normalized to midnight (UTC)
+  lessonId  String
+  reason    String
+  priority  Int      @default(5) // 1 (low) - 10 (high)
+  status    String   @default("PENDING") // PENDING | DONE | SKIPPED
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date, lessonId])
+  @@index([userId, date])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  // lesson_completed | exercise_completed | quiz_passed | quiz_failed |
+  // achievement_earned | level_up | streak_milestone | project_submitted |
+  // project_approved | certificate_earned | course_completed | study_day
+  data      Json   
+  courseId  String?
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lessonId  String?
+  lesson    Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, isRead])
+}
+
+model UserSetting {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // LIGHT | DARK | SYSTEM
+  theme              String    @default("SYSTEM")
+  dailyGoalMinutes   Int       @default(30)
+  weeklyGoalMinutes  Int       @default(210)
+  // any | morning | afternoon | evening
+  preferredTime      String    @default("any")
+  // READING | VIDEO | INTERACTIVE | PRACTICE — how lessons are presented
+  learningMode       String    @default("READING")
+  // Instructors teach first: practice stays locked until the teaching is reviewed.
+  instructorMode     Boolean   @default(false)
+  notifications      Json    
+  emailNotifications Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+// ─────────────────────────────── LEARNING GAMES ─────────────────────────────
+//
+// Data-driven games. Every game is a row in `Game`; each of its levels is a
+// `GameLevel` whose `config` JSON is interpreted by a per-kind renderer and
+// grader in `src/lib/games/`. Adding a new game (or a whole new kind) requires
+// no schema change — only data + a renderer/grader entry.
+
+model Game {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  slug              String   @unique
+  name              String
+  description       String
+  // html_builder | css_painter | js_logic | bug_hunter | cyber_escape | website_builder
+  kind              String
+  icon              String
+  color             String   @default("#6366f1")
+  // BEGINNER | INTERMEDIATE | ADVANCED
+  difficulty        String   @default("BEGINNER")
+  estimatedMinutes  Int      @default(10)
+  // Base XP for finishing the whole game (display + badge math)
+  xpReward          Int      @default(30)
+  // Extra CodeCoins minted when the game is first beaten (bosses use this)
+  rewardCoins       Int      @default(0)
+  // Minimum account level required to play
+  levelRequirement  Int      @default(1)
+  // Learning-progress unlock rule — see src/lib/games/unlock.ts
+  unlockCriteria    Json?
+  // The Programming World this game belongs to (null = standalone)
+  worldId           String?
+  world             World?   @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  // Boss battles end their world — beating one unlocks the next world.
+  isBoss            Boolean  @default(false)
+  // Worlds can mint a WorldCertificate titled with this value when the boss is beaten.
+  certificateTitle  String?
+  learningObjectives Json   // string[]
+  hints             Json     // string[]
+  // Badge definitions — see src/lib/games/badges.ts
+  badges            Json     // [{ name, description, icon, requirement }]
+  order             Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  levels   GameLevel[]
+  progress GameProgress[]
+}
+
+model GameLevel {
+  id           String    @id @default(cuid())
+  gameId       String
+  game         Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  key          String
+  order        Int       @default(0)
+  title        String
+  description  String?
+  instructions String?
+  objectives   Json      // string[]
+  // Kind-specific level data — see src/lib/games/types.ts
+  config       Json
+  hints        Json      // string[]
+  explanation  String? // shown after the level is beaten
+  xpReward     Int       @default(15)
+  isActive     Boolean   @default(true)
+
+  progress GameProgress[]
+
+  @@unique([gameId, key])
+  @@index([gameId])
+}
+
+model GameProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId      String
+  game        Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  levelId     String
+  level       GameLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  // LOCKED | UNLOCKED | BEATEN | PERFECT
+  status      String    @default("LOCKED")
+  bestScore   Int       @default(0)
+  attempts    Int       @default(0)
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, levelId])
+  @@index([userId, gameId])
+}
+
+// ───────────────────────── NETWORKING LAB ──────────────────────────────────
+
+model NetworkProject {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  // The full SimSnapshot (devices, cables, mac tables, startup configs).
+  snapshot    Json
+  // Which mission this project belongs to, when created from the mission list.
+  missionSlug String?
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, isArchived])
+  @@index([userId, missionSlug])
+}
+
+model NetworkMissionProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug        String
+  // IN_PROGRESS | COMPLETED
+  status      String    @default("IN_PROGRESS")
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, slug])
+}
+
+// ─────────────────────────────── MEDIA ─────────────────────────────────────
+
+model MediaAsset {
+  id           String    @id @default(cuid())
+  filename     String
+  url          String
+  mimeType     String
+  size         Int
+  uploadedById String?
+  uploadedBy   User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+}
+
+// ─────────────────────── PROGRESSION: XP / COINS ───────────────────────────
+//
+// Every XP and CodeCoin award is an immutable ledger row. XP is only ever
+// earned (never spent); CodeCoins are spent in the store. Level is always
+// derived from total XP via src/lib/engine/xp.ts (kept in sync on User.level).
+
+model XpTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  // lesson_completed | exercise_passed | quiz_passed | project_approved |
+  // game_level_completed | achievement_earned | daily_login | level_up | mission
+  type      String
+  reason    String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+model CoinTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int // positive = earned, negative = spent
+  type      String
+  reason    String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ───────────────────────── PROGRESSION: TITLES ─────────────────────────────
+
+model Title {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  name           String
+  description    String
+  icon           String
+  // COMMON | RARE | EPIC | LEGENDARY | MYTHIC
+  rarity         String   @default("COMMON")
+  // level | xp | achievement | store
+  unlockType     String   @default("level")
+  // level number or XP threshold (used when unlockType is level/xp)
+  unlockValue    Int      @default(0)
+  achievementKey String? // required when unlockType = achievement
+  price          Int      @default(0) // CodeCoins when unlockType = store
+  isActive       Boolean  @default(true)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  users    UserTitle[]
+  equipped User[]       @relation("EquippedTitle")
+}
+
+model UserTitle {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  titleId  String
+  title    Title    @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, titleId])
+  @@index([userId])
+}
+
+// ────────────────────────── PROGRESSION: STORE ─────────────────────────────
+
+model StoreItem {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String
+  // profile_frame | avatar | username_color | theme | cursor_effect |
+  // wallpaper | certificate_border | title_card | achievement_effect
+  type        String
+  asset       Json // cosmetic payload interpreted by the UI (class/css/url/emoji)
+  price       Int
+  // COMMON | RARE | EPIC | LEGENDARY | MYTHIC
+  rarity      String  @default("COMMON")
+  minLevel    Int     @default(0)
+  isActive    Boolean @default(true)
+  order       Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  purchases UserPurchase[]
+}
+
+model UserPurchase {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        StoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  purchasedAt DateTime  @default(now())
+
+  @@unique([userId, itemId])
+  @@index([userId])
+}
+
+// ──────────────────────── PROGRESSION: MISSIONS ────────────────────────────
+
+model DailyMission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  title       String
+  description String
+  // complete_lesson | earn_xp | pass_quiz | pass_exercise | play_game | study_minutes
+  type        String
+  target      Int
+  rewardCoins Int
+  rewardXp    Int      @default(0)
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model UserMission {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missionKey String
+  type       String
+  dateKey    String // local YYYY-MM-DD
+  progress   Int       @default(0)
+  target     Int
+  claimed    Boolean   @default(false)
+  claimedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([userId, missionKey, dateKey])
+  @@index([userId, dateKey])
+}
+
+// ──────────────────────── PROGRESSION: WORLDS ───────────────────────────────
+//
+// The top-level "Programming Worlds" of the adventure map. Each world groups
+// courses (lessons/quizzes/projects), mini games and a boss into one topic.
+// Students must MASTER a world before the next one unlocks. Every rule is data
+// — unlock criteria and mastery weights live on the rows so teachers can
+// rebalance progression from the admin panel without code changes.
+
+model World {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  slug          String   @unique
+  name          String
+  description   String
+  icon          String
+  color         String   @default("#6366f1")
+  // BEGINNER | INTERMEDIATE | ADVANCED
+  difficulty    String   @default("BEGINNER")
+  order         Int      @default(0)
+  // Course slugs whose lessons/quizzes/projects feed this world's mastery.
+  courseSlugs   Json // string[]
+  // Unlock rules — see src/lib/games/types.ts (UnlockCriteria).
+  unlockCriteria Json?
+  // Mastery weights — see src/lib/engine/worlds.ts (WORLD_DEFAULT_MASTERY_CONFIG).
+  masteryConfig Json?
+  rewardXp      Int      @default(0) // certificate reward
+  rewardCoins   Int      @default(0) // certificate reward
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  games         Game[]
+  progress      UserWorldProgress[]
+  certificates  WorldCertificate[]
+  masteryEvents MasteryEvent[]
+}
+
+model UserWorldProgress {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  worldId          String
+  world            World     @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  // LOCKED | UNLOCKED | ACTIVE | MASTERED
+  status           String    @default("LOCKED")
+  lessonPoints     Int       @default(0) // completed lessons in linked courses
+  gamePoints       Int       @default(0) // beaten (non-boss) games
+  quizPoints       Int       @default(0) // first-time passed quizzes
+  projectPoints    Int       @default(0) // approved projects in linked courses
+  bossPoints       Int       @default(0) // 1 when the boss is defeated
+  practicePoints   Int       @default(0) // daily practice days
+  perfectBonus     Int       @default(0) // extra points for perfect games/quizzes
+  quizFailMap      Json? // { [quizId]: failCount } — mastery decays on repeated fails
+  masteryPercent   Int       @default(0)
+  bossDefeated     Boolean   @default(false)
+  certificateEarned Boolean  @default(false)
+  unlockedAt       DateTime?
+  masteredAt       DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([userId, worldId])
+  @@index([userId])
+  @@index([worldId])
+}
+
+model MasteryEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  worldId   String
+  world     World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  // lesson | game | game_perfect | quiz | quiz_fail | project | boss | practice
+  type      String
+  amount    Int      @default(0) // mastery points contributed (negative = decay)
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, worldId, createdAt])
+}
+
+model WorldCertificate {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  worldId   String
+  world     World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  title     String
+  code      String   @unique
+  issuedAt  DateTime @default(now())
+
+  @@unique([userId, worldId])
+  @@index([userId])
+}
