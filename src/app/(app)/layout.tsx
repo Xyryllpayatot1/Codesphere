@@ -5,6 +5,9 @@ import { levelFromXp } from "@/lib/engine/xp";
 import { AppShell } from "@/components/layout/app-shell";
 import type { ShellUser } from "@/components/layout/sidebar";
 
+// Server-rendered per request (DB-backed) — never statically prerendered.
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
   if (!session) redirect("/login");

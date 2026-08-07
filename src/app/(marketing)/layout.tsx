@@ -4,6 +4,9 @@ import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
+// Server-rendered per request (course data is DB-backed) — no static build deps.
+export const dynamic = "force-dynamic";
+
 export default async function MarketingLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
 

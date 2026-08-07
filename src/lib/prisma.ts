@@ -8,6 +8,11 @@ import { PrismaClient } from "@/generated/prisma/client";
 // Prisma 7 requires a driver adapter. We connect to Supabase Postgres through
 // node-postgres (pg). Set DATABASE_URL to your Postgres/Supabase connection
 // string (pooler or direct). See README.
+//
+// The client is created lazily so importing this module never connects or
+// throws — the first actual query does. This keeps `next build` from crashing
+// when DATABASE_URL is temporarily unset (e.g. Render `sync:false` secrets
+// that are filled in after the first deploy).
 // ---------------------------------------------------------------------------
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pgPool?: pg.Pool };
@@ -26,8 +31,15 @@ function createClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function getPrisma(): PrismaClient {
+  if (!globalForPrisma.prisma) globalForPrisma.prisma = createClient();
+  return globalForPrisma.prisma;
 }
+
+/** Lazy singleton — first property access creates the client + pool. */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrisma();
+    return (client as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
