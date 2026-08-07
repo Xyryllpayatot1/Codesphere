@@ -6,13 +6,16 @@
 // server-only modules that fail outside the Next runtime).
 // ---------------------------------------------------------------------------
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 import { Prisma, PrismaClient } from "@/generated/prisma/client";
 import bcrypt from "bcryptjs";
 import type { ContentBlock } from "@/lib/content/types";
 
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./dev.db" });
-const prisma = new PrismaClient({ adapter });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL is not set.");
+const pool = new pg.Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 // ---------------------------------------------------------------------------
 // Helpers
