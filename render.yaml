@@ -1,0 +1,27 @@
+# Render Blueprint — CodeSphere LMS
+# Deploy via: Dashboard → New → Blueprint → point to this repo, or
+# render.yaml is auto-detected when you create a Blueprint from the repo.
+#
+# ENV SECRETS: DATABASE_URL and AUTH_SECRET use sync:false — after the first
+# deploy, fill them in once under Dashboard → Environment. Everything else is
+# applied automatically from this file.
+
+services:
+  - type: web
+    name: codesphere-lms
+    runtime: node
+    rootDir: .
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: APP_URL
+        value: https://codesphere-lms.onrender.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://kjpnyowsexasqofiejze.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqcG55b3dzZXhhc3FvZmllanplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTY3MjcsImV4cCI6MjA5NzI3MjcyN30.apccOsMlwTt-4BKVVnToQzvr-iuMRN-_wviA-pPznKY
