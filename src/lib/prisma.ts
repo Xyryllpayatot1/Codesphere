@@ -6,8 +6,8 @@ import { PrismaClient } from "@/generated/prisma/client";
 
 // ---------------------------------------------------------------------------
 // Prisma 7 requires a driver adapter. We connect to Supabase Postgres through
-// node-postgres (pg). For local SQLite dev, swap back to
-// @prisma/adapter-better-sqlite3 and set DATABASE_URL="file:./dev.db".
+// node-postgres (pg). Set DATABASE_URL to your Postgres/Supabase connection
+// string (pooler or direct). See README.
 // ---------------------------------------------------------------------------
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pgPool?: pg.Pool };
