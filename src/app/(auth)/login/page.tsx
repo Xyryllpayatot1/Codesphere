@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/shared/logo";
 import { APP_NAME } from "@/lib/constants";
+import { BRAND_TAGLINE, CREATOR_NAME } from "@/lib/brand";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,8 +48,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Link href="/" className="mb-8">
+      <Link href="/" className="mb-3 flex flex-col items-center">
         <Logo />
+        <span className="mt-2 text-sm font-medium text-muted-foreground">{BRAND_TAGLINE}</span>
       </Link>
       <Card className="w-full max-w-sm">
         <CardHeader>
@@ -79,6 +81,9 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        A student-driven platform for practical technology education · Created &amp; led by {CREATOR_NAME}
+      </p>
     </div>
   );
 }

@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// CodeSphere
+// Educational Technology Platform
+// Created & Led by Jhon Xyryll Samoy
+// © 2026 CodeSphere
+// ---------------------------------------------------------------------------
+
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";

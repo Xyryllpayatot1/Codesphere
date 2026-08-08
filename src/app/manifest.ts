@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BRAND_DESCRIPTION } from "@/lib/brand";
 
 export const dynamic = "force-static";
 
@@ -6,8 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "CodeSphere — Learn to Code, Interactively",
     short_name: "CodeSphere",
-    description:
-      "Learn to code in short sessions with interactive lessons, a code playground, a networking lab and more.",
+    description: BRAND_DESCRIPTION,
     id: "/",
     start_url: "/dashboard",
     scope: "/",

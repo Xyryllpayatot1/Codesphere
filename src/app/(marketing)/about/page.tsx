@@ -1,6 +1,11 @@
-import { AboutContent } from "@/components/marketing/about/about-content";
+// ---------------------------------------------------------------------------
+// CodeSphere
+// Educational Technology Platform
+// Created & Led by Jhon Xyryll Samoy
+// © 2026 CodeSphere
+// ---------------------------------------------------------------------------
 
-export const dynamic = "force-dynamic";
+import { AboutContent } from "@/components/marketing/about/about-content";
 
 export default function AboutPage() {
   return <AboutContent />;

@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CourseCard } from "@/components/marketing/course-card";
+import { BRAND_TAGLINE, CREATOR_NAME } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function LandingPage() {
         <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[52rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
         <div className="mx-auto max-w-6xl px-4 pb-20 pt-24 text-center">
           <Badge variant="accent" className="mb-6">
-            <Sparkles className="h-3.5 w-3.5" /> Interactive, AI-free, project-driven
+            <Sparkles className="h-3.5 w-3.5" /> {BRAND_TAGLINE}
           </Badge>
           <h1 className="mx-auto max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
             Learn to code by <span className="text-primary">actually coding</span>
@@ -54,6 +55,9 @@ export default async function LandingPage() {
             <span className="inline-flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-success" /> Progress & analytics</span>
             <span className="inline-flex items-center gap-1.5"><Flame className="h-4 w-4 text-success" /> Streaks & achievements</span>
           </div>
+          <p className="mt-6 text-xs text-muted-foreground">
+            A student-driven platform for practical technology education · Created &amp; led by {CREATOR_NAME}
+          </p>
         </div>
       </section>
 

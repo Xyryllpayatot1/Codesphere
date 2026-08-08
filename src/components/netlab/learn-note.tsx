@@ -23,7 +23,7 @@ export function LearnNote() {
     learn.kind === "success" ? "border-success/40" : learn.kind === "error" ? "border-destructive/40" : "border-primary/30";
 
   return (
-    <div className="pointer-events-auto absolute bottom-3 left-3 z-40 w-80 max-w-[calc(100%-6rem)]">
+    <div className="pointer-events-auto absolute left-3 top-20 z-40 w-80 max-w-[calc(100%-6rem)] lg:bottom-3 lg:top-auto">
       <div className={cn("rounded-xl border bg-card/95 p-3 shadow-2xl backdrop-blur", borderColor)}>
         <div className="flex items-start gap-2.5">
           <span className={cn("mt-0.5", titleColor)}>

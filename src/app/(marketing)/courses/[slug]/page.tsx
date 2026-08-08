@@ -26,6 +26,15 @@ import { DIFFICULTY_LABELS, LESSON_STATUS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
+async function loadSuggested(excludeId: string) {
+  return prisma.course.findMany({
+    where: { id: { not: excludeId }, status: "PUBLISHED" },
+    include: { category: true, _count: { select: { modules: true, lessons: true, enrollments: true } } },
+    orderBy: { enrollments: { _count: "desc" } },
+    take: 3,
+  });
+}
+
 export default async function CourseDetailPage({ params }: PageProps<"/courses/[slug]">) {
   const { slug } = await params;
   const session = await getSession();
@@ -48,7 +57,7 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
   });
   if (!course || course.status !== "PUBLISHED") notFound();
 
-  const [enrollment, completedRows, certificate, stats, prereqs] = await Promise.all([
+  const [enrollment, completedRows, certificate, prereqs] = await Promise.all([
     session ? prisma.enrollment.findUnique({ where: { userId_courseId: { userId: session.id, courseId: course.id } } }) : null,
     session
       ? prisma.lessonProgress.findMany({
@@ -57,22 +66,32 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
         })
       : [],
     session ? prisma.certificate.findUnique({ where: { userId_courseId: { userId: session.id, courseId: course.id } } }) : null,
-    prisma.$transaction([
-      prisma.enrollment.count({ where: { courseId: course.id } }),
-      prisma.project.count({ where: { courseId: course.id, isPublished: true } }),
-      prisma.lesson.count({ where: { courseId: course.id, isPublished: true } }),
-      prisma.exercise.count({ where: { lesson: { courseId: course.id } } }),
-      prisma.quiz.count({ where: { courseId: course.id } }),
-    ]),
     (course.prerequisiteIds as string[] | null)?.length
       ? prisma.course.findMany({ where: { slug: { in: course.prerequisiteIds as string[] }, status: "PUBLISHED" }, select: { id: true, title: true, slug: true } })
       : Promise.resolve([]),
   ]);
 
-  const [learnerCount, projectCount, lessonCount, exerciseCount, quizCount] = stats;
+  const flatLessons = course.modules.flatMap((m) => m.lessons);
+  const lessonCount = flatLessons.length;
+
+  // Secondary statistics — read-only counts, no consistency requirement, so they
+  // run as independent pooled queries (NOT a $transaction, which pins a pooled
+  // connection for the whole batch and can exhaust the pool under concurrency).
+  // If they fail the course page still renders; stats degrade gracefully.
+  let stats: [number, number, number, number] | null = null;
+  try {
+    stats = (await Promise.all([
+      prisma.enrollment.count({ where: { courseId: course.id } }),
+      prisma.project.count({ where: { courseId: course.id, isPublished: true } }),
+      prisma.exercise.count({ where: { lesson: { courseId: course.id } } }),
+      prisma.quiz.count({ where: { courseId: course.id } }),
+    ])) as [number, number, number, number];
+  } catch (err) {
+    console.error(`[courses/${slug}] statistics query failed:`, err);
+  }
+  const [learnerCount = 0, projectCount = 0, exerciseCount = 0, quizCount = 0] = stats ?? [];
 
   const completed = new Set(completedRows.map((r) => r.lessonId));
-  const flatLessons = course.modules.flatMap((m) => m.lessons);
   const completedCount = flatLessons.filter((l) => completed.has(l.id)).length;
   const progress = lessonCount === 0 ? 0 : Math.round((completedCount / lessonCount) * 100);
   const isComplete = progress >= 100;
@@ -86,12 +105,12 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
   }
   const currentModule = currentLesson ? course.modules.find((m) => m.lessons.some((l) => l.id === currentLesson!.id)) : undefined;
 
-  const suggested = await prisma.course.findMany({
-    where: { id: { not: course.id }, status: "PUBLISHED" },
-    include: { category: true, _count: { select: { modules: true, lessons: true, enrollments: true } } },
-    orderBy: { enrollments: { _count: "desc" } },
-    take: 3,
-  });
+  let suggested: Awaited<ReturnType<typeof loadSuggested>> = [];
+  try {
+    suggested = await loadSuggested(course.id);
+  } catch (err) {
+    console.error(`[courses/${slug}] suggested courses query failed:`, err);
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -113,7 +132,7 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
             <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4" /> {course.estimatedHours} hours</span>
             <span className="inline-flex items-center gap-1.5"><Layers className="h-4 w-4" /> {course.modules.length} modules</span>
             <span className="inline-flex items-center gap-1.5"><FileCode2 className="h-4 w-4" /> {lessonCount} lessons</span>
-            <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" /> {learnerCount} learners</span>
+            <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" /> {stats ? `${learnerCount} learners` : "Learner stats unavailable"}</span>
           </div>
 
           {prereqs.length > 0 && (
@@ -145,24 +164,30 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
               <span>{course.icon ?? "📘"}</span>
             </div>
             <CardContent className="p-5">
-              <dl className="mb-4 grid grid-cols-2 gap-y-3 text-sm">
-                <div>
-                  <dt className="text-muted-foreground">Exercises</dt>
-                  <dd className="font-medium">{exerciseCount}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Quizzes</dt>
-                  <dd className="font-medium">{quizCount}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Projects</dt>
-                  <dd className="font-medium">{projectCount}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">XP total</dt>
-                  <dd className="font-medium">{course.xpTotal}</dd>
-                </div>
-              </dl>
+              {stats ? (
+                <dl className="mb-4 grid grid-cols-2 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground">Exercises</dt>
+                    <dd className="font-medium">{exerciseCount}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Quizzes</dt>
+                    <dd className="font-medium">{quizCount}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Projects</dt>
+                    <dd className="font-medium">{projectCount}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">XP total</dt>
+                    <dd className="font-medium">{course.xpTotal}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+                  Statistics temporarily unavailable. Reload to try again.
+                </p>
+              )}
 
               {!session ? (
                 <div className="space-y-2">

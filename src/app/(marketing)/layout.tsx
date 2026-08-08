@@ -1,6 +1,14 @@
+// ---------------------------------------------------------------------------
+// CodeSphere
+// Educational Technology Platform
+// Created & Led by Jhon Xyryll Samoy
+// © 2026 CodeSphere
+// ---------------------------------------------------------------------------
+
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { Logo } from "@/components/shared/logo";
+import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
@@ -23,6 +31,9 @@ export default async function MarketingLayout({ children }: LayoutProps<"/">) {
             </Link>
             <Link href="/about" className="transition hover:text-foreground">
               About
+            </Link>
+            <Link href="/credits" className="transition hover:text-foreground">
+              Credits
             </Link>
             <Link href="/#features" className="transition hover:text-foreground">
               Features
@@ -51,13 +62,7 @@ export default async function MarketingLayout({ children }: LayoutProps<"/">) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row">
-          <Logo iconOnly />
-          <p>Built for learners. Interactive, project-driven programming education.</p>
-          <p>© {new Date().getFullYear()} CodeSphere</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,4 +1,9 @@
 // ---------------------------------------------------------------------------
+// CodeSphere
+// Educational Technology Platform
+// Created & Led by Jhon Xyryll Samoy
+// © 2026 CodeSphere
+// ---------------------------------------------------------------------------
 // Platform-wide constants. Strings (not enums) keep the schema provider-portable.
 // ---------------------------------------------------------------------------
 

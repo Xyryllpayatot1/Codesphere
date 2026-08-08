@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// CodeSphere
+// Educational Technology Platform
+// Created & Led by Jhon Xyryll Samoy
+// © 2026 CodeSphere
+// ---------------------------------------------------------------------------
+
 import { Code2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";

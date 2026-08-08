@@ -3,17 +3,10 @@
 import { useRef, useState } from "react";
 import { Cable, Check, ChevronDown, Plug } from "lucide-react";
 import { useNetlab } from "./netlab-store";
+import { CABLE_CHOICES } from "./cable-choices";
 import { CABLE_TYPES } from "@/lib/net/types";
 import type { CableType } from "@/lib/net/types";
 import { cn } from "@/lib/utils";
-
-const CHOICES: { type: CableType; scene: string; tech: string }[] = [
-  { type: "copperStraight", scene: "Computer ↔ Switch", tech: "Straight-Through Cable" },
-  { type: "copperCrossover", scene: "Switch ↔ Switch", tech: "Crossover Cable" },
-  { type: "console", scene: "PC ↔ Router/Switch CLI", tech: "Console Cable" },
-  { type: "serial", scene: "Router ↔ Router (WAN)", tech: "Serial Cable" },
-  { type: "fiber", scene: "Fast backbone link", tech: "Fiber Cable" },
-];
 
 export function CableChooser() {
   const { cableType, setCableType, setTool, setLearn } = useNetlab();
@@ -53,7 +46,7 @@ export function CableChooser() {
               <Plug className="h-3 w-3" /> What are you connecting?
             </p>
             <div className="space-y-1">
-              {CHOICES.map((c) => {
+              {CABLE_CHOICES.map((c) => {
                 const def = CABLE_TYPES[c.type];
                 const active = cableType === c.type;
                 return (

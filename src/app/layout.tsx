@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+// CodeSphere
+// Educational Technology Platform
+// Created & Led by Jhon Xyryll Samoy
+// © 2026 CodeSphere
+// ---------------------------------------------------------------------------
+
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
@@ -7,6 +14,7 @@ import { ReactQueryProvider } from "@/components/providers/query-provider";
 import { PwaRegister } from "@/components/providers/pwa-register";
 import { Toaster } from "@/components/ui/toaster";
 import { APP_NAME } from "@/lib/constants";
+import { BRAND_DESCRIPTION } from "@/lib/brand";
 import type { ThemePreference } from "@/store/use-theme";
 
 const geistSans = Geist({
@@ -24,8 +32,7 @@ export const metadata: Metadata = {
     default: `${APP_NAME} — Learn to Code, Interactively`,
     template: `%s · ${APP_NAME}`,
   },
-  description:
-    "An interactive programming learning platform. Learn HTML, CSS, JavaScript and more with hands-on exercises, quizzes, projects and adaptive study plans.",
+  description: BRAND_DESCRIPTION,
   applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
   appleWebApp: {

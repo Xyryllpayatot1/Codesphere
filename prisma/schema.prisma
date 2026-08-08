@@ -212,6 +212,8 @@ model Exercise {
   updatedAt    DateTime @updatedAt
 
   submissions ExerciseSubmission[]
+
+  @@index([lessonId])
 }
 
 model ExerciseSubmission {
@@ -252,6 +254,9 @@ model Quiz {
 
   questions QuizQuestion[]
   attempts  QuizAttempt[]
+
+  @@index([courseId])
+  @@index([lessonId])
 }
 
 model QuizQuestion {
@@ -388,6 +393,7 @@ model Enrollment {
   updatedAt   DateTime  @updatedAt
 
   @@unique([userId, courseId])
+  @@index([courseId])
 }
 
 model LessonProgress {

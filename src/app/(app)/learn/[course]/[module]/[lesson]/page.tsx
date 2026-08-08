@@ -32,12 +32,14 @@ export default async function LessonPage({ params }: PageProps<"/learn/[course]/
       where: { userId: session.id, lesson: { courseId: lesson.courseId } },
       select: { lessonId: true, status: true },
     }),
-    prisma.$transaction([
+    // Read-only counters — no transaction needed; independent pooled reads avoid
+    // pinning a single connection for the whole batch under pooler concurrency.
+    Promise.all([
       prisma.exercise.count({ where: { lessonId: lesson.id, isOptional: false } }),
       prisma.exerciseSubmission.count({ where: { userId: session.id, exercise: { lessonId: lesson.id }, passed: true } }),
       prisma.quiz.count({ where: { lessonId: lesson.id } }),
       prisma.quizAttempt.count({ where: { userId: session.id, quiz: { lessonId: lesson.id }, passed: true } }),
-    ]),
+    ]).catch(() => [0, 0, 0, 0]),
     prisma.userSetting.findUnique({ where: { userId: session.id } }),
   ]);
 

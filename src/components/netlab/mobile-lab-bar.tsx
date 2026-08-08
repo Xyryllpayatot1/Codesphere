@@ -20,12 +20,16 @@ import {
   Download,
   Grid3x3,
   Layers,
+  X,
+  ChevronRight,
 } from "lucide-react";
 import { useNetlab } from "./netlab-store";
 import { DeviceIcon, deviceColor } from "./device-icon";
 import { DEVICE_TYPES } from "@/lib/net/devices";
 import type { DeviceType } from "@/lib/net/types";
+import { CABLE_TYPES } from "@/lib/net/types";
 import { TracePanel } from "./trace-panel";
+import { CableSheet } from "./cable-sheet";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +43,11 @@ export function MobileLabBar({
   onOpenTopologies: () => void;
   onOpenProjects: () => void;
 }) {
-  const { tool, setTool, cableFrom, disarmCable, undo, gridSnap, setGridSnap, mode, setMode, setMissionPickerOpen } = useNetlab();
+  const { tool, setTool, cableType, cableFrom, undo, gridSnap, setGridSnap, mode, setMode, setMissionPickerOpen } = useNetlab();
   const [devicesOpen, setDevicesOpen] = useState(false);
   const [packetOpen, setPacketOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [cableSheetOpen, setCableSheetOpen] = useState(false);
 
   const onImport = () => {
     const input = document.createElement("input");
@@ -60,7 +65,34 @@ export function MobileLabBar({
 
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-3 bottom-20 z-30 flex items-end justify-center lg:hidden">
+      <div className="pointer-events-none absolute inset-x-3 bottom-20 z-30 flex flex-col items-center gap-1.5 lg:hidden">
+        {tool === "cable" && (
+          <div className="pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-2xl border border-primary/40 bg-card/95 px-3 py-2 shadow-2xl backdrop-blur">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CABLE_TYPES[cableType].color }} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-medium leading-tight text-foreground">
+                Cable: {CABLE_TYPES[cableType].friendly}
+              </p>
+              <p className="truncate text-[10px] leading-tight text-muted-foreground">
+                {cableFrom ? "Tap the second device…" : "Tap the first device…"}
+              </p>
+            </div>
+            <button
+              onClick={() => setCableSheetOpen(true)}
+              className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border bg-background/60 px-2 py-1 text-[11px] font-medium text-foreground transition hover:bg-secondary active:scale-[0.97]"
+            >
+              Change
+              <ChevronRight className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => setTool("select")}
+              aria-label="Cancel cable mode"
+              className="shrink-0 rounded-lg p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground active:scale-[0.97]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-2xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur">
           <ToolButton
             active={tool === "select"}
@@ -72,7 +104,7 @@ export function MobileLabBar({
             active={tool === "cable"}
             icon={<Cable className="h-5 w-5" />}
             label="Connect"
-            onClick={() => (tool === "cable" && cableFrom ? disarmCable() : setTool("cable"))}
+            onClick={() => setCableSheetOpen(true)}
           />
           <ToolButton
             active={tool === "delete"}
@@ -91,6 +123,8 @@ export function MobileLabBar({
           <ToolButton icon={<Menu className="h-5 w-5" />} label="More" onClick={() => setMoreOpen(true)} />
         </div>
       </div>
+
+      <CableSheet open={cableSheetOpen} onOpenChange={setCableSheetOpen} />
 
       {/* Devices sheet */}
       <BottomSheet
