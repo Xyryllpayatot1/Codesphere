@@ -113,10 +113,50 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Creator & Project Lead** — Jhon Xyryll Samoy (Founder & Lead Developer · Head of Team Xy · ICT Club President 2026)
 - **Technology** — see the in-app [Credits](/credits) page or the table above.
 
-## AI-Assisted Development Disclosure
+## Copyright & Ownership
 
-> CodeSphere was developed using AI-assisted software development tools alongside human-led product design, architecture, testing, and development direction.
+```
+CodeSphere
+Copyright © 2026 Jhon Xyryll Samoy.
+All rights reserved.
+```
+
+- **Project:** CodeSphere
+- **Creator:** Jhon Xyryll Samoy
+- **Role:** Founder & Lead Developer (Head of Team Xy · ICT Club President 2026)
+- **Copyright year:** 2026
+
+CodeSphere is an educational technology platform developed as a student-driven project focused on practical programming, web development, networking, and digital technology education.
+
+### Original project materials
+
+The following are original project-owned materials created for CodeSphere: the application source code under `src/`, the original UI/UX design, educational content (lessons, exercises, quizzes, games), the networking simulation architecture and logic, project documentation, and original graphics and branding. Seed data in `prisma/seed.ts` contains the original curriculum content.
+
+### AI-assisted development disclosure
+
+CodeSphere was developed using AI-assisted software development tools alongside human-led product design, architecture, testing, and development direction. The repository may contain human-created original work, AI-assisted work, third-party code, and open-source dependencies.
+
+### Third-party software notice
+
+CodeSphere is built on widely used open-source technologies — including Next.js, React, TypeScript, Prisma, Tailwind CSS, Zustand, TanStack Query, and others — which remain the property of their respective authors and are used under their own licenses. CodeSphere does not claim ownership over third-party libraries, frameworks, icons, fonts, or other external resources. See [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) for the full list with versions, licenses, and sources.
+
+### Open-source dependency notice
+
+Third-party dependencies are distributed under their own open-source licenses (MIT, Apache-2.0, BSD-3-Clause, ISC, etc.), which remain in effect for those packages. See the license files inside each package under `node_modules/` and the [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) table.
+
+### Copyright vs. trademark
+
+Copyright protects original expression and is claimed above for CodeSphere materials. Trademark registration is separate from copyright protection. The CodeSphere name is not claimed as a registered trademark unless formal registration is completed.
+
+### Documentation
+
+For the full ownership and development record, see:
+
+- [`docs/COPYRIGHT.md`](docs/COPYRIGHT.md) — complete copyright and ownership statement
+- [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) — third-party components and licenses
+- [`docs/DEVELOPMENT_HISTORY.md`](docs/DEVELOPMENT_HISTORY.md) — maintainable development history
+- [`docs/DEVELOPMENT_RECORD.md`](docs/DEVELOPMENT_RECORD.md) — Git-based development evidence
 
 ## License
 
-All rights reserved. CodeSphere and its content are © 2026 CodeSphere.
+All rights reserved. CodeSphere and its content are © 2026 Jhon Xyryll Samoy. No open-source license is applied to the project's original materials. Third-party dependencies retain their own licenses (see above).

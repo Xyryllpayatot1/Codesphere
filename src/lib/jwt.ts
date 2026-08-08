@@ -1,3 +1,9 @@
+/*
+ * CodeSphere
+ * Copyright © 2026 Jhon Xyryll Samoy
+ * All rights reserved.
+ */
+
 // Pure JWT helpers (jose only) — safe to import from the edge proxy as well as
 // Node server code. Signing/verification of the session cookie.
 

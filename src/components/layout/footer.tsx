@@ -60,10 +60,7 @@ export function Footer() {
         <div className="space-y-2 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Ownership</p>
           <p className="text-muted-foreground">
-            © {COPYRIGHT_YEAR} {BRAND_NAME}
-          </p>
-          <p className="text-muted-foreground">
-            Created &amp; Led by <span className="font-medium text-foreground">{CREATOR_NAME}</span>
+            © {COPYRIGHT_YEAR} {BRAND_NAME} — {CREATOR_NAME}
           </p>
         </div>
       </div>

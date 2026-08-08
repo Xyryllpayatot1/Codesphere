@@ -1,3 +1,9 @@
+/*
+ * CodeSphere
+ * Copyright © 2026 Jhon Xyryll Samoy
+ * All rights reserved.
+ */
+
 // ---------------------------------------------------------------------------
 // Seed data for CodeSphere. Idempotent (upserts keyed by slug/key) — safe to
 // re-run. Run with: npx prisma db seed  (or `tsx prisma/seed.ts`)

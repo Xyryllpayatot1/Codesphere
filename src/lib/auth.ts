@@ -1,3 +1,9 @@
+/*
+ * CodeSphere
+ * Copyright © 2026 Jhon Xyryll Samoy
+ * All rights reserved.
+ */
+
 import "server-only";
 
 import { cookies } from "next/headers";
