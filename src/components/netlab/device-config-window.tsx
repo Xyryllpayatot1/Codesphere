@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Terminal, Trash2, Plus, Wifi, Info, Activity, Users, ShieldAlert, LayoutGrid, Power } from "lucide-react";
 import { useNetlab } from "./netlab-store";
+import { useIsMobile } from "@/lib/mobile";
 import { DeviceIcon, deviceColor } from "./device-icon";
 import { DEVICE_TYPES } from "@/lib/net/devices";
 import { deviceTip } from "@/lib/net/explain";
@@ -138,6 +139,7 @@ function ConfigWindow({ device, onClose }: { device: Device; onClose: () => void
   const def = DEVICE_TYPES[device.type];
   const tabs = TABS[device.type];
   const off = device.poweredOn === false;
+  const mobile = useIsMobile();
   const [pos, setPos] = useState({ x: typeof window !== "undefined" ? Math.max(24, window.innerWidth - 460 - 24) : 24, y: 72 });
   const [size, setSize] = useState({ width: 430, height: 540 });
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
@@ -176,15 +178,19 @@ function ConfigWindow({ device, onClose }: { device: Device; onClose: () => void
     <div className="fixed inset-0 z-40" onPointerDown={onClose}>
       <div
         className="pointer-events-auto absolute flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
-        style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
+        style={
+          mobile
+            ? { left: 0, top: 0, width: "100%", height: "100%", borderRadius: 0, border: "none" }
+            : { left: pos.x, top: pos.y, width: size.width, height: size.height }
+        }
         onPointerDown={(e) => e.stopPropagation()}
       >
         {/* title bar */}
         <div
-          className="flex cursor-move items-center gap-2 border-b border-border bg-secondary/60 px-3 py-2"
-          onPointerDown={onTitleDown}
-          onPointerMove={onTitleMove}
-          onPointerUp={onTitleUp}
+          className={cn("flex items-center gap-2 border-b border-border bg-secondary/60 px-3 py-2", !mobile && "cursor-move")}
+          onPointerDown={mobile ? undefined : onTitleDown}
+          onPointerMove={mobile ? undefined : onTitleMove}
+          onPointerUp={mobile ? undefined : onTitleUp}
         >
           <DeviceIcon type={device.type} className={cn("h-6 w-6", deviceColor(device.type))} />
           <div className="min-w-0 flex-1">
@@ -271,9 +277,11 @@ function ConfigWindow({ device, onClose }: { device: Device; onClose: () => void
         </div>
 
         {/* resize handle */}
-        <div className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize" onPointerDown={onResizeDown} onPointerMove={onResizeMove} onPointerUp={onResizeUp}>
-          <span className="absolute bottom-1 right-1 h-2 w-2 rounded-sm border-b-2 border-r-2 border-muted-foreground/50" />
-        </div>
+        {!mobile && (
+          <div className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize" onPointerDown={onResizeDown} onPointerMove={onResizeMove} onPointerUp={onResizeUp}>
+            <span className="absolute bottom-1 right-1 h-2 w-2 rounded-sm border-b-2 border-r-2 border-muted-foreground/50" />
+          </div>
+        )}
       </div>
     </div>
   );

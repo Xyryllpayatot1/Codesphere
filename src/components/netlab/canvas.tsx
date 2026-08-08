@@ -62,6 +62,20 @@ export function Canvas() {
   const [dragState, setDragState] = useState<{ id: string } | null>(null);
   const [now, setNow] = useState(0);
 
+  // Touch gestures: track every active pointer (including pointers captured by
+  // device divs) via capture-phase handlers so two-finger pinch/pan works.
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ dist: number; startZoom: number; startPan: { x: number; y: number }; mid: { x: number; y: number } } | null>(null);
+  const lastTapRef = useRef<{ t: number; deviceId: string } | null>(null);
+  const longPressRef = useRef<number | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressRef.current != null) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+
   const hasAnim = packets.length > 0 || bursts.length > 0;
 
   useEffect(() => {
@@ -127,6 +141,46 @@ export function Canvas() {
     return { x: (clientX - rect.left - pan.x) / zoom, y: (clientY - rect.top - pan.y) / zoom };
   };
 
+  // Capture-phase handlers see every pointer (even ones captured by device
+  // divs), which lets us implement two-finger pinch-zoom and pan on touch.
+  const onPointerDownCapture = (e: React.PointerEvent) => {
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 2) {
+      const pts = [...pointersRef.current.values()];
+      dragRef.current = null;
+      setDragState(null);
+      clearLongPress();
+      pinchRef.current = {
+        dist: Math.max(1, Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)),
+        startZoom: zoom,
+        startPan: { ...pan },
+        mid: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
+      };
+    }
+  };
+
+  const onPointerMoveCapture = (e: React.PointerEvent) => {
+    const cur = pointersRef.current.get(e.pointerId);
+    if (cur) {
+      cur.x = e.clientX;
+      cur.y = e.clientY;
+    }
+    const pinch = pinchRef.current;
+    if (!pinch || pointersRef.current.size < 2) return;
+    const pts = [...pointersRef.current.values()];
+    const dist = Math.max(1, Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y));
+    const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    const nextZoom = Math.min(2.4, Math.max(0.4, pinch.startZoom * (dist / pinch.dist)));
+    const k = nextZoom / pinch.startZoom;
+    setZoom(nextZoom);
+    setPan({ x: mid.x - (mid.x - pinch.startPan.x) * k, y: mid.y - (mid.y - pinch.startPan.y) * k });
+  };
+
+  const onPointerUpCapture = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+  };
+
   const onDragOver = (e: React.DragEvent) => {
     if (e.dataTransfer.types.includes(PALETTE_DRAG_TYPE) || e.dataTransfer.types.includes("text/plain")) {
       e.preventDefault();
@@ -143,6 +197,7 @@ export function Canvas() {
   };
 
   const onBackgroundDown = (e: React.PointerEvent) => {
+    if (pointersRef.current.size >= 2) return;
     if (e.button === 2) {
       closeContextMenu();
       return;
@@ -174,6 +229,7 @@ export function Canvas() {
 
   const onDeviceDown = (e: React.PointerEvent, d: Device) => {
     e.stopPropagation();
+    if (pointersRef.current.size >= 2) return;
     if (e.button === 2) return;
     closeContextMenu();
     if (tool === "cable") {
@@ -192,6 +248,12 @@ export function Canvas() {
     dragRef.current = { type: "device", id: d.id, startX: e.clientX, startY: e.clientY, origPos: { x: d.x, y: d.y } };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragState({ id: d.id });
+    // Long-press on a device opens its context menu (touch has no right-click).
+    clearLongPress();
+    longPressRef.current = window.setTimeout(() => {
+      longPressRef.current = null;
+      openContextMenu(e.clientX, e.clientY, d.id);
+    }, 550);
   };
 
   const onDeviceMove = (e: React.PointerEvent, d: Device) => {
@@ -199,11 +261,29 @@ export function Canvas() {
     if (drag?.type === "device" && drag.id === d.id && drag.origPos) {
       const dx = e.clientX - drag.startX;
       const dy = e.clientY - drag.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) clearLongPress();
       moveDevice(d.id, Math.max(0, drag.origPos.x + dx / zoom), Math.max(0, drag.origPos.y + dy / zoom));
     }
   };
 
   const onDeviceUp = (e: React.PointerEvent, d: Device) => {
+    clearLongPress();
+    const drag = dragRef.current;
+    const moved =
+      drag?.type === "device" &&
+      drag.id === d.id &&
+      (Math.abs(e.clientX - drag.startX) > 8 || Math.abs(e.clientY - drag.startY) > 8);
+    if (!moved) {
+      // Tap detection — double-tap opens configuration (touch has no double-click).
+      const now = e.timeStamp;
+      const last = lastTapRef.current;
+      if (last && last.deviceId === d.id && now - last.t < 320) {
+        openConfig(d.id);
+        lastTapRef.current = null;
+      } else {
+        lastTapRef.current = { t: now, deviceId: d.id };
+      }
+    }
     if (dragState?.id === d.id) snapDevice(d.id);
     dragRef.current = null;
     setDragState(null);
@@ -245,6 +325,10 @@ export function Canvas() {
       onPointerMove={onBackgroundMove}
       onPointerUp={onBackgroundUp}
       onPointerLeave={onBackgroundUp}
+      onPointerDownCapture={onPointerDownCapture}
+      onPointerMoveCapture={onPointerMoveCapture}
+      onPointerUpCapture={onPointerUpCapture}
+      onPointerCancelCapture={onPointerUpCapture}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onContextMenu={(e) => {

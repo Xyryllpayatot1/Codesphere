@@ -5,6 +5,7 @@ import { useNetlab } from "./netlab-store";
 import { Canvas } from "./canvas";
 import { Palette } from "./palette";
 import { Toolbar } from "./toolbar";
+import { MobileLabBar } from "./mobile-lab-bar";
 import { TracePanel } from "./trace-panel";
 import { MissionPanel } from "./mission-panel";
 import { MissionPicker } from "./mission-picker";
@@ -56,17 +57,26 @@ export function NetLab({ initial }: { initial?: NetLabInitial }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1">
-        <Palette />
+        <div className="hidden lg:block">
+          <Palette />
+        </div>
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="relative min-h-0 flex-1">
-            <Toolbar onOpenTopologies={() => setShowTopologies(true)} onOpenProjects={() => setShowProjects(true)} />
+            <div className="hidden lg:block">
+              <Toolbar onOpenTopologies={() => setShowTopologies(true)} onOpenProjects={() => setShowProjects(true)} />
+            </div>
             <Canvas />
             <MissionPanel />
             <LearnNote />
             <ContextMenu />
+            <MobileLabBar onOpenTopologies={() => setShowTopologies(true)} onOpenProjects={() => setShowProjects(true)} />
           </div>
-          <TracePanel />
-          <CmdLog />
+          <div className="hidden lg:block">
+            <TracePanel />
+          </div>
+          <div className="hidden lg:block">
+            <CmdLog />
+          </div>
         </div>
       </div>
       <DeviceConfigWindow />

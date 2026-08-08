@@ -2,7 +2,8 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateStudyPlan } from "@/lib/engine/recommendation";
 import { loadDashboardData } from "@/lib/dashboard-data";
-import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import type { NetProjectRow } from "@/components/dashboard/mobile-dashboard";
 import { todayKey, fromDateKey } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,27 @@ export default async function DashboardPage() {
     await generateStudyPlan(userId, { availableMinutes: settings?.dailyGoalMinutes ?? 30, dateKey: today });
   }
 
-  const data = await loadDashboardData(userId);
-  return <DashboardView data={data} />;
+  const [data, recentProjects] = await Promise.all([
+    loadDashboardData(userId),
+    prisma.networkProject.findMany({
+      where: { userId, isArchived: false },
+      orderBy: { updatedAt: "desc" },
+      take: 3,
+      select: {
+        id: true,
+        title: true,
+        missionSlug: true,
+        updatedAt: true,
+        snapshot: true,
+      },
+    }),
+  ]);
+
+  return (
+    <DashboardShell
+      data={data}
+      recentProjects={recentProjects as NetProjectRow[]}
+      recentLessons={data.activities.slice(0, 6)}
+    />
+  );
 }

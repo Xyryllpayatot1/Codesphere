@@ -68,7 +68,7 @@ export function MissionPanel() {
 
       <div
         className={cn(
-          "absolute right-2 top-12 bottom-2 z-30 flex w-72 flex-col rounded-2xl border border-border bg-card/95 shadow-2xl backdrop-blur transition-transform",
+          "absolute right-2 top-12 bottom-2 z-30 flex w-72 max-w-[calc(100%-1rem)] flex-col rounded-2xl border border-border bg-card/95 shadow-2xl backdrop-blur transition-transform",
           missionPanelOpen ? "translate-x-0" : "pointer-events-none translate-x-[calc(100%+1rem)]"
         )}
       >
