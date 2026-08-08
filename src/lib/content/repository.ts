@@ -66,10 +66,11 @@ export async function getCourseStructure(courseId: string) {
   });
 }
 
-/** Next/previous lesson within a course, respecting module order. */
-export async function getAdjacentLessons(courseId: string, lessonId: string) {
-  const modules = await getCourseStructure(courseId);
-  const flat = modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleId: m.id })));
+/** Next/previous lesson within a course, respecting module order. Pure computation
+ *  over an already-loaded structure — avoids re-running getCourseStructure (and
+ *  thus a second DB round trip) on the lesson page. */
+export function getAdjacentLessons(structure: Awaited<ReturnType<typeof getCourseStructure>>, lessonId: string) {
+  const flat = structure.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleId: m.id })));
   const idx = flat.findIndex((l) => l.id === lessonId);
   if (idx === -1) return { prev: null, next: null };
   return {

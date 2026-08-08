@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLessonBySlug, getCourseStructure, getAdjacentLessons, parseContent } from "@/lib/content/repository";
+import { makePerf } from "@/lib/perf";
 import { touchLesson } from "@/lib/services/progress";
 import { LEARNING_MODES, LEARNING_MODE_VALUES, type LearningMode } from "@/lib/content/modes";
 import { LessonModePanel } from "@/components/learning/lesson/lesson-mode-panel";
@@ -15,19 +16,23 @@ import { DifficultyPill } from "@/components/shared/gamification";
 import { LESSON_STATUS } from "@/lib/constants";
 
 export default async function LessonPage({ params }: PageProps<"/learn/[course]/[module]/[lesson]">) {
-  const session = await requireSession();
+  const perf = makePerf("lesson page");
   const { course: courseSlug, module: moduleSlug, lesson: lessonSlug } = await params;
 
-  const lesson = await getLessonBySlug(courseSlug, moduleSlug, lessonSlug);
+  // requireSession is JWT-only (no DB round trip), so it runs in parallel with
+  // the lesson lookup — one round trip total instead of two sequential ones.
+  const [session, lesson] = await Promise.all([
+    requireSession(),
+    getLessonBySlug(courseSlug, moduleSlug, lessonSlug),
+  ]);
+  perf("session + lesson");
   if (!lesson || !lesson.isPublished || !lesson.course) notFound();
   const course = lesson.course;
 
-  // Mark lesson as in-progress (no throw on first visit).
-  await touchLesson(session.id, lesson.id).catch(() => {});
-
-  const [structure, adjacency, progressRows, counters, userSetting] = await Promise.all([
+  // Mark lesson as in-progress (no throw on first visit). Runs inside the batch
+  // so the write does not add a separate sequential round trip.
+  const [structure, progressRows, counters, userSetting] = await Promise.all([
     getCourseStructure(lesson.courseId),
-    getAdjacentLessons(lesson.courseId, lesson.id),
     prisma.lessonProgress.findMany({
       where: { userId: session.id, lesson: { courseId: lesson.courseId } },
       select: { lessonId: true, status: true },
@@ -41,7 +46,12 @@ export default async function LessonPage({ params }: PageProps<"/learn/[course]/
       prisma.quizAttempt.count({ where: { userId: session.id, quiz: { lessonId: lesson.id }, passed: true } }),
     ]).catch(() => [0, 0, 0, 0]),
     prisma.userSetting.findUnique({ where: { userId: session.id } }),
+    touchLesson(session.id, lesson.id).catch(() => {}),
   ]);
+  perf("structure/progress/counters/settings + touch");
+
+  // Pure in-memory derivation from the structure already loaded above.
+  const adjacency = getAdjacentLessons(structure, lesson.id);
 
   const initialMode: LearningMode = LEARNING_MODE_VALUES.includes(
     (userSetting?.learningMode ?? LEARNING_MODES.READING) as LearningMode,

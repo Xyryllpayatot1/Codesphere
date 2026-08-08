@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateStudyPlan } from "@/lib/engine/recommendation";
 import { loadDashboardData } from "@/lib/dashboard-data";
+import { makePerf } from "@/lib/perf";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import type { NetProjectRow } from "@/components/dashboard/mobile-dashboard";
 import { todayKey, fromDateKey } from "@/lib/utils";
@@ -9,7 +10,9 @@ import { todayKey, fromDateKey } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const perf = makePerf("dashboard");
   const session = await requireSession();
+  perf("session");
   const userId = session.id;
   const today = todayKey();
 
@@ -17,10 +20,12 @@ export default async function DashboardPage() {
     prisma.studyPlanItem.count({ where: { userId, date: fromDateKey(today) } }),
     prisma.enrollment.count({ where: { userId, status: { not: "COMPLETED" }, course: { status: "PUBLISHED" } } }),
   ]);
+  perf("plan/enrollment counts");
 
   if (todayPlanCount === 0 && activeEnrollments > 0) {
     const settings = await prisma.userSetting.findUnique({ where: { userId } });
     await generateStudyPlan(userId, { availableMinutes: settings?.dailyGoalMinutes ?? 30, dateKey: today });
+    perf("generateStudyPlan");
   }
 
   const [data, recentProjects] = await Promise.all([
@@ -38,6 +43,7 @@ export default async function DashboardPage() {
       },
     }),
   ]);
+  perf("dashboard data + recent projects");
 
   return (
     <DashboardShell

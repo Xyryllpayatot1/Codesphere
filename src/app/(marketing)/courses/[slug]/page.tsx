@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { makePerf } from "@/lib/perf";
 import { CourseCard } from "@/components/marketing/course-card";
 import { EnrollButton } from "@/components/marketing/enroll-button";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ async function loadSuggested(excludeId: string) {
 
 export default async function CourseDetailPage({ params }: PageProps<"/courses/[slug]">) {
   const { slug } = await params;
+  const perf = makePerf(`courses/${slug}`);
   const session = await getSession();
 
   const course = await prisma.course.findUnique({
@@ -55,9 +57,17 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
       },
     },
   });
+  perf("course findUnique");
   if (!course || course.status !== "PUBLISHED") notFound();
 
-  const [enrollment, completedRows, certificate, prereqs] = await Promise.all([
+  // Everything below depends only on course.id (+ session), so it runs in ONE
+  // parallel batch — a single pooled round trip instead of four sequential ones
+  // (the dominant latency cost: each round trip is ~260ms on this pooler stack).
+  // Secondary statistics are read-only counts with no consistency requirement, so
+  // they run as independent pooled queries (NOT a $transaction, which pins a pooled
+  // connection for the whole batch and can exhaust the pool under concurrency).
+  // If they fail the course page still renders; stats degrade gracefully.
+  const [enrollment, completedRows, certificate, prereqs, stats, suggested] = await Promise.all([
     session ? prisma.enrollment.findUnique({ where: { userId_courseId: { userId: session.id, courseId: course.id } } }) : null,
     session
       ? prisma.lessonProgress.findMany({
@@ -69,26 +79,33 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
     (course.prerequisiteIds as string[] | null)?.length
       ? prisma.course.findMany({ where: { slug: { in: course.prerequisiteIds as string[] }, status: "PUBLISHED" }, select: { id: true, title: true, slug: true } })
       : Promise.resolve([]),
+    (async (): Promise<[number, number, number, number] | null> => {
+      try {
+        return (await Promise.all([
+          prisma.enrollment.count({ where: { courseId: course.id } }),
+          prisma.project.count({ where: { courseId: course.id, isPublished: true } }),
+          prisma.exercise.count({ where: { lesson: { courseId: course.id } } }),
+          prisma.quiz.count({ where: { courseId: course.id } }),
+        ])) as [number, number, number, number];
+      } catch (err) {
+        console.error(`[courses/${slug}] statistics query failed:`, err);
+        return null;
+      }
+    })(),
+    (async (): Promise<Awaited<ReturnType<typeof loadSuggested>>> => {
+      try {
+        return await loadSuggested(course.id);
+      } catch (err) {
+        console.error(`[courses/${slug}] suggested courses query failed:`, err);
+        return [];
+      }
+    })(),
   ]);
+  perf("parallel batch (enrollment/progress/cert/prereqs/stats/suggested)");
 
   const flatLessons = course.modules.flatMap((m) => m.lessons);
   const lessonCount = flatLessons.length;
 
-  // Secondary statistics — read-only counts, no consistency requirement, so they
-  // run as independent pooled queries (NOT a $transaction, which pins a pooled
-  // connection for the whole batch and can exhaust the pool under concurrency).
-  // If they fail the course page still renders; stats degrade gracefully.
-  let stats: [number, number, number, number] | null = null;
-  try {
-    stats = (await Promise.all([
-      prisma.enrollment.count({ where: { courseId: course.id } }),
-      prisma.project.count({ where: { courseId: course.id, isPublished: true } }),
-      prisma.exercise.count({ where: { lesson: { courseId: course.id } } }),
-      prisma.quiz.count({ where: { courseId: course.id } }),
-    ])) as [number, number, number, number];
-  } catch (err) {
-    console.error(`[courses/${slug}] statistics query failed:`, err);
-  }
   const [learnerCount = 0, projectCount = 0, exerciseCount = 0, quizCount = 0] = stats ?? [];
 
   const completed = new Set(completedRows.map((r) => r.lessonId));
@@ -104,13 +121,6 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
     }
   }
   const currentModule = currentLesson ? course.modules.find((m) => m.lessons.some((l) => l.id === currentLesson!.id)) : undefined;
-
-  let suggested: Awaited<ReturnType<typeof loadSuggested>> = [];
-  try {
-    suggested = await loadSuggested(course.id);
-  } catch (err) {
-    console.error(`[courses/${slug}] suggested courses query failed:`, err);
-  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">

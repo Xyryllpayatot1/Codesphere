@@ -262,20 +262,22 @@ export async function generateStudyPlan(userId: string, input: PlanGenerationInp
   }
 
   // 6. Persist
+  // deleteMany + createMany run as independent pooled queries rather than a
+  // $transaction — a $transaction pins one pooled connection for the whole batch
+  // and can exhaust the pool under concurrency on this pooler stack. If the
+  // process dies between the two, the next dashboard load simply regenerates.
   const date = fromDateKey(dateKey);
-  await prisma.$transaction([
-    prisma.studyPlanItem.deleteMany({ where: { userId, date } }),
-    prisma.studyPlanItem.createMany({
-      data: plan.map((p) => ({
-        userId,
-        date,
-        lessonId: p.lessonId,
-        reason: p.reason,
-        priority: Math.round(p.score * 10),
-        status: PLAN_ITEM_STATUS.PENDING,
-      })),
-    }),
-  ]);
+  await prisma.studyPlanItem.deleteMany({ where: { userId, date } });
+  await prisma.studyPlanItem.createMany({
+    data: plan.map((p) => ({
+      userId,
+      date,
+      lessonId: p.lessonId,
+      reason: p.reason,
+      priority: Math.round(p.score * 10),
+      status: PLAN_ITEM_STATUS.PENDING,
+    })),
+  });
 
   return {
     plan,
