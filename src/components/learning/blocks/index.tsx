@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { InlineHtml } from "./inline-html";
 import { Callout } from "./callout";
 import { CodeBlock } from "./code-block";
-
 export function BlockHeading({ block }: { block: Extract<ContentBlock, { type: "heading" }> }) {
   const Tag = block.level === 1 ? "h2" : block.level === 2 ? "h3" : "h4";
   return (
@@ -146,9 +145,17 @@ import { DemoBlock } from "./demo-block";
 import { GuidedBlock } from "./guided-block";
 import { MistakeBlock } from "./mistake-block";
 import { ReflectionBlock } from "./reflection-block";
+import dynamic from "next/dynamic";
 import { PromptBuilderBlock } from "./prompt-builder-block";
 import { PromptAnalyzerBlock } from "./prompt-analyzer-block";
-import { NetLabBlock } from "./netlab-block";
+
+// The netlab block ships the full networking simulator (canvas + event loop +
+// device logic), which is heavy. It's only used by networking lessons, so it's
+// split into its own chunk and fetched on demand instead of every lesson bundle.
+const NetLabBlock = dynamic(() => import("./netlab-block").then((m) => m.NetLabBlock), {
+  ssr: false,
+  loading: () => <div className="my-6 h-[560px] animate-pulse rounded-xl border border-border bg-muted" />,
+});
 
 export function LessonBlocks({ blocks, className }: { blocks: ContentBlock[]; className?: string }) {
   return (

@@ -48,20 +48,24 @@ export async function progressMission(
   dateKey: string = currentDateKey()
 ): Promise<void> {
   if (amount <= 0) return;
-  const missions = await prisma.dailyMission.findMany({ where: { isActive: true, type }, select: { key: true, target: true } });
+  const [missions, existing] = await Promise.all([
+    prisma.dailyMission.findMany({ where: { isActive: true, type }, select: { key: true, target: true } }),
+    prisma.userMission.findMany({ where: { userId, dateKey } }),
+  ]);
   if (missions.length === 0) return;
 
-  for (const mission of missions) {
-    const existing = await prisma.userMission.findUnique({
-      where: { userId_missionKey_dateKey: { userId, missionKey: mission.key, dateKey } },
-    });
-    const progress = Math.min(mission.target, (existing?.progress ?? 0) + amount);
-    await prisma.userMission.upsert({
-      where: { userId_missionKey_dateKey: { userId, missionKey: mission.key, dateKey } },
-      create: { userId, missionKey: mission.key, type, dateKey, progress, target: mission.target, claimed: existing?.claimed ?? false },
-      update: { progress, updatedAt: new Date() },
-    });
-  }
+  const existingByKey = new Map(existing.map((e) => [e.missionKey, e]));
+  await Promise.all(
+    missions.map(async (mission) => {
+      const ex = existingByKey.get(mission.key);
+      const progress = Math.min(mission.target, (ex?.progress ?? 0) + amount);
+      await prisma.userMission.upsert({
+        where: { userId_missionKey_dateKey: { userId, missionKey: mission.key, dateKey } },
+        create: { userId, missionKey: mission.key, type, dateKey, progress, target: mission.target, claimed: ex?.claimed ?? false },
+        update: { progress, updatedAt: new Date() },
+      });
+    })
+  );
 }
 
 /** Today's missions with the user's progress and claim state. */

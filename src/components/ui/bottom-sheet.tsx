@@ -48,7 +48,8 @@ export function BottomSheet({
     };
   }, [open, onOpenChange]);
 
-  const sheetMaxHeight = fullScreen ? (vvHeight ?? window.innerHeight) : (vvHeight ?? window.innerHeight) * 0.92;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+  const sheetMaxHeight = fullScreen ? (vvHeight ?? viewportHeight) : (vvHeight ?? viewportHeight) * 0.92;
 
   return (
     <AnimatePresence>

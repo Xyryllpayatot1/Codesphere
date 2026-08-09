@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Play, Code2, CheckCircle2, BarChart3, Sparkles, Rocket, Flame, Trophy } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getCachedFeaturedCourses } from "@/lib/content/course-cache";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CourseCard } from "@/components/marketing/course-card";
@@ -14,12 +14,7 @@ export default async function LandingPage() {
   const session = await getSession();
   if (session) redirect("/dashboard");
 
-  const courses = await prisma.course.findMany({
-    where: { status: "PUBLISHED" },
-    include: { category: true, _count: { select: { modules: true, lessons: true, enrollments: true } } },
-    orderBy: { order: "asc" },
-    take: 6,
-  });
+  const courses = await getCachedFeaturedCourses();
 
   return (
     <>

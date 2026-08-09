@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getCachedCategories, getCachedCourseListing } from "@/lib/content/course-cache";
 import { CourseCard } from "@/components/marketing/course-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,32 +21,36 @@ export default async function CoursesPage({ searchParams }: PageProps<"/courses"
   const difficulty = first(params.difficulty) ?? "";
   const sort = first(params.sort) ?? "popular";
 
-  const [categories, courses] = await Promise.all([
-    prisma.category.findMany({
-      include: { _count: { select: { courses: true } } },
-      orderBy: { order: "asc" },
-    }),
-    prisma.course.findMany({
-      where: {
-        status: "PUBLISHED",
-        ...(cat ? { category: { slug: cat } } : {}),
-        ...(difficulty ? { difficulty } : {}),
-        ...(q ? { OR: [{ title: { contains: q } }, { description: { contains: q } }] } : {}),
-      },
-      include: {
-        category: true,
-        _count: { select: { modules: true, lessons: true, enrollments: true } },
-      },
-      orderBy:
-        sort === "title"
-          ? { title: "asc" }
-          : sort === "newest"
-            ? { createdAt: "desc" }
-            : { enrollments: { _count: "desc" } },
-    }),
-  ]);
+  const hasFilters = Boolean(q || cat || difficulty) || sort !== "popular";
 
-  const hasFilters = Boolean(q || cat || difficulty);
+  // The default listing is stable, public content → served from the data cache.
+  // Filtered/search listings stay dynamic (bounded cache keys, no stale results).
+  const [categories, courses] = hasFilters
+    ? await Promise.all([
+        prisma.category.findMany({
+          include: { _count: { select: { courses: true } } },
+          orderBy: { order: "asc" },
+        }),
+        prisma.course.findMany({
+          where: {
+            status: "PUBLISHED",
+            ...(cat ? { category: { slug: cat } } : {}),
+            ...(difficulty ? { difficulty } : {}),
+            ...(q ? { OR: [{ title: { contains: q } }, { description: { contains: q } }] } : {}),
+          },
+          include: {
+            category: true,
+            _count: { select: { modules: true, lessons: true, enrollments: true } },
+          },
+          orderBy:
+            sort === "title"
+              ? { title: "asc" }
+              : sort === "newest"
+                ? { createdAt: "desc" }
+                : { enrollments: { _count: "desc" } },
+        }),
+      ])
+    : await Promise.all([getCachedCategories(), getCachedCourseListing()]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">

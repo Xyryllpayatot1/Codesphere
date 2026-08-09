@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getLessonBySlug, getCourseStructure, getAdjacentLessons, parseContent } from "@/lib/content/repository";
+import { getCachedLessonBySlug, getCachedCourseStructure } from "@/lib/content/course-cache";
+import { getAdjacentLessons, parseContent } from "@/lib/content/repository";
 import { makePerf } from "@/lib/perf";
 import { touchLesson } from "@/lib/services/progress";
 import { LEARNING_MODES, LEARNING_MODE_VALUES, type LearningMode } from "@/lib/content/modes";
@@ -23,7 +24,7 @@ export default async function LessonPage({ params }: PageProps<"/learn/[course]/
   // the lesson lookup — one round trip total instead of two sequential ones.
   const [session, lesson] = await Promise.all([
     requireSession(),
-    getLessonBySlug(courseSlug, moduleSlug, lessonSlug),
+    getCachedLessonBySlug(courseSlug, moduleSlug, lessonSlug),
   ]);
   perf("session + lesson");
   if (!lesson || !lesson.isPublished || !lesson.course) notFound();
@@ -32,7 +33,7 @@ export default async function LessonPage({ params }: PageProps<"/learn/[course]/
   // Mark lesson as in-progress (no throw on first visit). Runs inside the batch
   // so the write does not add a separate sequential round trip.
   const [structure, progressRows, counters, userSetting] = await Promise.all([
-    getCourseStructure(lesson.courseId),
+    getCachedCourseStructure(lesson.courseId),
     prisma.lessonProgress.findMany({
       where: { userId: session.id, lesson: { courseId: lesson.courseId } },
       select: { lessonId: true, status: true },
@@ -53,11 +54,8 @@ export default async function LessonPage({ params }: PageProps<"/learn/[course]/
   // Pure in-memory derivation from the structure already loaded above.
   const adjacency = getAdjacentLessons(structure, lesson.id);
 
-  const initialMode: LearningMode = LEARNING_MODE_VALUES.includes(
-    (userSetting?.learningMode ?? LEARNING_MODES.READING) as LearningMode,
-  )
-    ? (userSetting?.learningMode as LearningMode)
-    : LEARNING_MODES.READING;
+  const prefMode = (userSetting?.learningMode ?? LEARNING_MODES.READING) as LearningMode;
+  const initialMode: LearningMode = LEARNING_MODE_VALUES.includes(prefMode) ? prefMode : LEARNING_MODES.READING;
 
   const completedMap: CompletedMap = Object.fromEntries(progressRows.map((p) => [p.lessonId, p.status === LESSON_STATUS.COMPLETED]));
   const modules: RailModule[] = structure.map((m) => ({

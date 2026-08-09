@@ -33,7 +33,7 @@ export default async function ProfilePage() {
   const session = await requireSession();
   const userId = session.id;
 
-  const [user, settings, stats, achievements, certificates, gameProgress, purchases] =
+  const [user, settings, stats, achievements, certificates, gameProgress, purchases, worlds, titlesRows, ownedRows] =
     await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, include: { title: true } }),
       prisma.userSetting.findUnique({ where: { userId } }),
@@ -56,18 +56,16 @@ export default async function ProfilePage() {
       prisma.certificate.count({ where: { userId } }),
       prisma.gameProgress.count({ where: { userId, status: { in: ["BEATEN", "PERFECT"] } } }),
       prisma.userPurchase.count({ where: { userId } }),
+      loadWorldMap(userId),
+      prisma.title.findMany({ where: { isActive: true }, orderBy: [{ order: "asc" }] }),
+      prisma.userTitle.findMany({ where: { userId }, select: { titleId: true } }),
     ]);
 
   if (!user) return null;
 
-  const worlds = await loadWorldMap(userId);
   const currentWorld = worlds.find((w) => w.isCurrent) ?? null;
   const worldsMastered = worlds.filter((w) => w.mastered).length;
 
-  const [titlesRows, ownedRows] = await Promise.all([
-    prisma.title.findMany({ where: { isActive: true }, orderBy: [{ order: "asc" }] }),
-    prisma.userTitle.findMany({ where: { userId }, select: { titleId: true } }),
-  ]);
   const ownedIds = new Set(ownedRows.map((o) => o.titleId));
   const titleData = {
     titles: titlesRows.map((t) => ({

@@ -12,22 +12,24 @@ export default async function CertificatesPage() {
   const session = await requireSession();
   const userId = session.id;
 
-  const certificates = await prisma.certificate.findMany({
-    where: { userId },
-    orderBy: { issuedAt: "desc" },
-    include: {
-      user: { select: { name: true } },
-      course: { select: { title: true, slug: true, color: true, icon: true } },
-    },
-  });
-  const worldCertificates = await prisma.worldCertificate.findMany({
-    where: { userId },
-    orderBy: { issuedAt: "desc" },
-    include: {
-      user: { select: { name: true } },
-      world: { select: { name: true, slug: true, color: true, icon: true } },
-    },
-  });
+  const [certificates, worldCertificates] = await Promise.all([
+    prisma.certificate.findMany({
+      where: { userId },
+      orderBy: { issuedAt: "desc" },
+      include: {
+        user: { select: { name: true } },
+        course: { select: { title: true, slug: true, color: true, icon: true } },
+      },
+    }),
+    prisma.worldCertificate.findMany({
+      where: { userId },
+      orderBy: { issuedAt: "desc" },
+      include: {
+        user: { select: { name: true } },
+        world: { select: { name: true, slug: true, color: true, icon: true } },
+      },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">

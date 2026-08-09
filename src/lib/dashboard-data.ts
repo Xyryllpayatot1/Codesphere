@@ -70,7 +70,9 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     select: { id: true, date: true, status: true, priority: true, reason: true, lessonId: true },
   });
 
-  const [user, settings, stats, activities, sessions, todaySessions, continueItems, lessons] = await Promise.all([
+  const lessonIds = [...new Set(planItems.map((p) => p.lessonId))];
+
+  const [user, settings, stats, activities, sessions, continueItems, lessons] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, xp: true, streak: true, longestStreak: true } }),
     prisma.userSetting.findUnique({ where: { userId } }),
     Promise.all([
@@ -96,10 +98,6 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       where: { userId, startedAt: { gte: startDay } },
       select: { startedAt: true, durationSeconds: true },
     }),
-    prisma.studySession.findMany({
-      where: { userId, startedAt: { gte: fromDateKey(today) } },
-      select: { durationSeconds: true },
-    }),
     prisma.lessonProgress.findMany({
       where: { userId, status: { not: "COMPLETED" }, progressPercent: { gt: 0 } },
       orderBy: { lastAccessedAt: "desc" },
@@ -117,17 +115,19 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
         },
       },
     }),
-    prisma.lesson.findMany({
-      where: { id: { in: planItems.map((p) => p.lessonId) } },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        estimatedMinutes: true,
-        module: { select: { slug: true } },
-        course: { select: { slug: true, title: true, color: true } },
-      },
-    }),
+    lessonIds.length > 0
+      ? prisma.lesson.findMany({
+          where: { id: { in: lessonIds } },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            estimatedMinutes: true,
+            module: { select: { slug: true } },
+            course: { select: { slug: true, title: true, color: true } },
+          },
+        })
+      : [],
   ]);
 
   const lv = levelFromXp(user?.xp ?? 0);
@@ -182,7 +182,9 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     levelNeeded: lv.needed,
     levelProgress: lv.progress,
     dailyGoal: settings?.dailyGoalMinutes ?? 30,
-    todayMinutes: Math.round(todaySessions.reduce((sum, s) => sum + s.durationSeconds, 0) / 60),
+    todayMinutes: Math.round(
+      sessions.filter((s) => s.startedAt >= fromDateKey(today)).reduce((sum, s) => sum + s.durationSeconds, 0) / 60
+    ),
     stats: { lessons: stats[0], courses: stats[1], achievements: stats[2], projects: stats[3] },
     plan,
     continueItem,

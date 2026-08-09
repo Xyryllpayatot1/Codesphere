@@ -252,8 +252,8 @@ export async function completeLesson(userId: string, lessonId: string) {
     });
   }
 
-  const achievementAward = await awardEligibleAchievements(userId);
   const courseResult = await checkCourseCompletion(userId, lesson.courseId);
+  const achievementAward = await awardEligibleAchievements(userId);
 
   return {
     completed: true,
@@ -311,9 +311,7 @@ async function checkCourseCompletion(userId: string, courseId: string) {
     }),
   ]);
 
-  const award = await awardEligibleAchievements(userId);
-
-  return { completed: true, already: false, certificate, progress: { completed, total }, achievements: award.awarded };
+  return { completed: true, already: false, certificate, progress: { completed, total } };
 }
 
 /** Records active study time; advances the streak once per day. */

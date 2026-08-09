@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getCachedCourseTree, getCachedSuggestedCourses } from "@/lib/content/course-cache";
 import { makePerf } from "@/lib/perf";
 import { CourseCard } from "@/components/marketing/course-card";
 import { EnrollButton } from "@/components/marketing/enroll-button";
@@ -27,37 +28,13 @@ import { DIFFICULTY_LABELS, LESSON_STATUS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-async function loadSuggested(excludeId: string) {
-  return prisma.course.findMany({
-    where: { id: { not: excludeId }, status: "PUBLISHED" },
-    include: { category: true, _count: { select: { modules: true, lessons: true, enrollments: true } } },
-    orderBy: { enrollments: { _count: "desc" } },
-    take: 3,
-  });
-}
-
 export default async function CourseDetailPage({ params }: PageProps<"/courses/[slug]">) {
   const { slug } = await params;
   const perf = makePerf(`courses/${slug}`);
   const session = await getSession();
 
-  const course = await prisma.course.findUnique({
-    where: { slug },
-    include: {
-      category: true,
-      modules: {
-        orderBy: { order: "asc" },
-        include: {
-          lessons: {
-            where: { isPublished: true },
-            orderBy: { order: "asc" },
-            include: { _count: { select: { exercises: true, quizzes: true } } },
-          },
-        },
-      },
-    },
-  });
-  perf("course findUnique");
+  const course = await getCachedCourseTree(slug);
+  perf("course tree (cached)");
   if (!course || course.status !== "PUBLISHED") notFound();
 
   // Everything below depends only on course.id (+ session), so it runs in ONE
@@ -92,9 +69,9 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
         return null;
       }
     })(),
-    (async (): Promise<Awaited<ReturnType<typeof loadSuggested>>> => {
+    (async (): Promise<Awaited<ReturnType<typeof getCachedSuggestedCourses>>> => {
       try {
-        return await loadSuggested(course.id);
+        return await getCachedSuggestedCourses(course.id);
       } catch (err) {
         console.error(`[courses/${slug}] suggested courses query failed:`, err);
         return [];

@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { ArrowRight, Award, BookCheck, Flame, FolderCheck, GraduationCap, Target } from "lucide-react";
+import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "@/components/dashboard/plan-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
-import { StudyChart } from "@/components/dashboard/study-chart";
 import { type DashboardData } from "@/lib/dashboard-data";
+
+// recharts is the largest client dependency on the dashboard; split it into its
+// own chunk so it loads only when the study chart is actually rendered.
+const StudyChart = dynamic(() => import("@/components/dashboard/study-chart").then((m) => m.StudyChart), {
+  ssr: false,
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
+});
 
 function greeting(): string {
   const h = new Date().getHours();

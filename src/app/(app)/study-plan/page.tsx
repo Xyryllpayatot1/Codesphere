@@ -43,46 +43,49 @@ export default async function StudyPlanPage() {
   const userId = session.id;
   const today = todayKey();
 
-  const [settings, enrollments] = await Promise.all([
+  const [settings, enrollments, items] = await Promise.all([
     prisma.userSetting.findUnique({ where: { userId } }),
     prisma.enrollment.findMany({
       where: { userId, status: { not: "COMPLETED" }, course: { status: "PUBLISHED" } },
       select: { id: true },
     }),
-  ]);
-
-  const [items, lessons] = await Promise.all([
     prisma.studyPlanItem.findMany({
       where: { userId, date: { gte: fromDateKey(today), lt: fromDateKey(todayKey(7)) } },
       orderBy: [{ date: "asc" }, { priority: "asc" }],
       select: { id: true, date: true, status: true, reason: true, lessonId: true },
     }),
-    prisma.lesson.findMany({
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        estimatedMinutes: true,
-        module: { select: { slug: true } },
-        course: { select: { slug: true, title: true, color: true } },
-      },
-    }),
   ]);
-  const lessonById = new Map(lessons.map((l) => [l.id, l]));
 
   const todayCount = items.filter((i) => toDateKey(i.date) === today).length;
 
+  let planItems = items;
   if (todayCount === 0 && enrollments.length > 0) {
     await generateStudyPlan(userId, { availableMinutes: settings?.dailyGoalMinutes ?? 30, dateKey: today });
+    planItems = await prisma.studyPlanItem.findMany({
+      where: { userId, date: { gte: fromDateKey(today), lt: fromDateKey(todayKey(7)) } },
+      orderBy: [{ date: "asc" }, { priority: "asc" }],
+      select: { id: true, date: true, status: true, reason: true, lessonId: true },
+    });
   }
 
-  const refreshed = await prisma.studyPlanItem.findMany({
-    where: { userId, date: { gte: fromDateKey(today), lt: fromDateKey(todayKey(7)) } },
-    orderBy: [{ date: "asc" }, { priority: "asc" }],
-    select: { id: true, date: true, status: true, reason: true, lessonId: true },
-  });
+  const lessonIds = [...new Set(planItems.map((i) => i.lessonId))];
+  const lessons =
+    lessonIds.length > 0
+      ? await prisma.lesson.findMany({
+          where: { id: { in: lessonIds } },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            estimatedMinutes: true,
+            module: { select: { slug: true } },
+            course: { select: { slug: true, title: true, color: true } },
+          },
+        })
+      : [];
+  const lessonById = new Map(lessons.map((l) => [l.id, l]));
 
-  const plan: PlanItemRow[] = refreshed.flatMap((item) => {
+  const plan: PlanItemRow[] = planItems.flatMap((item) => {
     const lesson = lessonById.get(item.lessonId);
     if (!lesson) return [];
     return [

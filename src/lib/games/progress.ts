@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { makePerf } from "@/lib/perf";
 import { gradeGameLevel } from "@/lib/games/grade";
 import { evaluateUnlock, unlockReason } from "@/lib/games/unlock";
 import { publicLevelConfig, type PublicLevelConfig } from "@/lib/games/public";
@@ -10,8 +11,8 @@ import { levelFromXp } from "@/lib/engine/xp";
 import { awardXp } from "@/lib/engine/rewards";
 import { progressMission, MISSION_TYPES } from "@/lib/engine/missions";
 import { recordStudyTime } from "@/lib/services/progress";
-import { buildUnlockContext, handleBossDefeat, recordWorldGame, type BossOutcome } from "@/lib/engine/worlds";
-import type { GameSubmission } from "@/lib/games/types";
+import { buildUnlockContextFor, handleBossDefeat, recordWorldGame, type BossOutcome } from "@/lib/engine/worlds";
+import type { GameSubmission, UnlockCriteria } from "@/lib/games/types";
 import type { XpAwardOutcome } from "@/lib/engine/rewards";
 
 // ---------------------------------------------------------------------------
@@ -73,6 +74,7 @@ export type LoadCatalogResult = {
 };
 
 export async function loadGameCatalog(userId: string): Promise<LoadCatalogResult> {
+  const perf = makePerf("games catalog");
   const [games, user] = await Promise.all([
     prisma.game.findMany({
       where: { isActive: true },
@@ -85,7 +87,8 @@ export async function loadGameCatalog(userId: string): Promise<LoadCatalogResult
     prisma.user.findUnique({ where: { id: userId }, select: { level: true, xp: true } }),
   ]);
 
-  const ctx = await buildUnlockContext(userId);
+  const ctx = await buildUnlockContextFor(userId, games.map((g) => g.unlockCriteria as UnlockCriteria | null | undefined));
+  perf("games + user + unlock ctx (scoped)");
 
   let totalLevels = 0;
   let levelsBeaten = 0;
@@ -206,6 +209,7 @@ export type GameDetailResult = {
 
 /** Load a single game with per-level lock state for the detail page. */
 export async function loadGameDetail(userId: string, slug: string): Promise<GameDetailResult> {
+  const perf = makePerf("game detail");
   const game = await prisma.game.findUnique({
     where: { slug },
     include: {
@@ -215,11 +219,10 @@ export async function loadGameDetail(userId: string, slug: string): Promise<Game
   });
   if (!game) return { game: null, unlocked: false, unlockReason: null, levels: [], progress: { beaten: 0, perfect: 0, total: 0, attempts: 0, gameCompleted: false } };
 
-  const [user, ctx] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { level: true, xp: true } }),
-    buildUnlockContext(userId),
-  ]);
-  const levelRequirementMet = (user?.level ?? 1) >= game.levelRequirement;
+  perf("game + levels + progress");
+  const ctx = await buildUnlockContextFor(userId, [game.unlockCriteria as UnlockCriteria | null | undefined]);
+  perf("user + unlock ctx (scoped)");
+  const levelRequirementMet = ctx.level >= game.levelRequirement;
   const unlocked = levelRequirementMet && evaluateUnlock(game.unlockCriteria as never, ctx);
   const reason = !levelRequirementMet ? `Reach level ${game.levelRequirement}` : unlockReason(game.unlockCriteria as never);
 

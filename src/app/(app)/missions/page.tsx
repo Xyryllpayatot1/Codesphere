@@ -10,10 +10,12 @@ export const dynamic = "force-dynamic";
 
 export default async function MissionsPage() {
   const session = await requireSession();
-  const user = await prisma.user.findUnique({ where: { id: session.id }, select: { xp: true, level: true, coins: true } });
+  const [user, missions] = await Promise.all([
+    prisma.user.findUnique({ where: { id: session.id }, select: { xp: true, level: true, coins: true } }),
+    loadTodaysMissions(session.id),
+  ]);
   const level = user?.level ?? 1;
   const unlocked = isFeatureUnlocked("missions", level);
-  const missions = await loadTodaysMissions(session.id);
 
   const view = missions.map((m) => ({
     key: m.key,

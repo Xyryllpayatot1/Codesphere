@@ -31,9 +31,8 @@ import {
   type WorldMasteryConfig,
 } from "@/lib/constants";
 import { evaluateUnlock, evaluateUnlockRequirements, type UnlockRequirementStatus } from "@/lib/games/unlock";
-import { getUserStats } from "@/lib/engine/achievements";
 import { awardXp } from "@/lib/engine/rewards";
-import type { UnlockContext } from "@/lib/games/types";
+import type { UnlockContext, UnlockCriteria } from "@/lib/games/types";
 
 // ────────────────────────────── Mastery math ────────────────────────────────
 
@@ -149,24 +148,46 @@ export function computeMastery(
 // ───────────────────────── Unlock context snapshot ──────────────────────────
 
 export async function buildUnlockContext(userId: string): Promise<UnlockContext> {
-  const [user, stats, worlds, achievements, worldProgress, gameRows, lessonRows, quizRows] = await Promise.all([
+  const [
+    user,
+    lessonsCompleted,
+    quizRows,
+    enrollments,
+    gameRows,
+    achievements,
+    worldProgress,
+    worlds,
+    lessonRows,
+    projectsApproved,
+    certificatesEarned,
+  ] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { level: true, xp: true, streak: true } }),
-    getUserStats(userId),
-    prisma.world.findMany({ where: { isActive: true }, orderBy: { order: "asc" }, select: { id: true, key: true, courseSlugs: true } }),
-    prisma.userAchievement.findMany({ where: { userId }, select: { achievement: { select: { key: true } } } }),
-    prisma.userWorldProgress.findMany({ where: { userId }, select: { worldId: true, masteryPercent: true, bossDefeated: true, certificateEarned: true } }),
+    prisma.lessonProgress.count({ where: { userId, status: "COMPLETED" } }),
+    prisma.quizAttempt.findMany({
+      where: { userId, quiz: { course: { is: { status: "PUBLISHED" } } } },
+      select: { score: true, maxScore: true, passed: true, quiz: { select: { courseId: true } } },
+    }),
+    prisma.enrollment.findMany({
+      where: { userId, status: "COMPLETED" },
+      select: { course: { select: { slug: true } } },
+    }),
     prisma.game.findMany({
       where: { isActive: true },
-      include: { levels: { where: { isActive: true }, select: { id: true } }, progress: { where: { userId }, select: { levelId: true, status: true } } },
+      select: {
+        slug: true,
+        levels: { where: { isActive: true }, select: { id: true } },
+        progress: { where: { userId }, select: { levelId: true, status: true } },
+      },
     }),
+    prisma.userAchievement.findMany({ where: { userId }, select: { achievement: { select: { key: true } } } }),
+    prisma.userWorldProgress.findMany({ where: { userId }, select: { worldId: true, masteryPercent: true, bossDefeated: true, certificateEarned: true } }),
+    prisma.world.findMany({ where: { isActive: true }, orderBy: { order: "asc" }, select: { id: true, key: true, courseSlugs: true } }),
     prisma.lessonProgress.findMany({
       where: { userId, status: "COMPLETED" },
       select: { lesson: { select: { courseId: true } } },
     }),
-    prisma.quizAttempt.findMany({
-      where: { quiz: { course: { is: { status: "PUBLISHED" } } } },
-      select: { score: true, maxScore: true, quiz: { select: { courseId: true } } },
-    }),
+    prisma.projectSubmission.count({ where: { userId, status: "APPROVED" } }),
+    prisma.certificate.count({ where: { userId } }),
   ]);
 
   const allSlugs = [...new Set(worlds.flatMap((w) => (w.courseSlugs as string[]) ?? []))];
@@ -223,13 +244,180 @@ export async function buildUnlockContext(userId: string): Promise<UnlockContext>
     level: user?.level ?? 1,
     xp: user?.xp ?? 0,
     streak: user?.streak ?? 0,
-    lessonsCompleted: stats.lessonsCompleted,
-    quizzesPassed: stats.quizzesPassed,
-    coursesCompleted: stats.coursesCompleted,
-    gamesBeaten: stats.gamesBeaten,
+    lessonsCompleted,
+    quizzesPassed: quizRows.filter((a) => a.passed).length,
+    coursesCompleted: enrollments.map((e) => e.course.slug),
+    gamesBeaten: [...beatenSlugs],
     gamesPerfect: [...perfectSlugs],
-    projectsApproved: stats.projectsApproved,
-    certificatesEarned: stats.certificatesEarned,
+    projectsApproved,
+    certificatesEarned,
+    achievementsEarned: achievements.map((a) => a.achievement.key),
+    worlds: worldCtx,
+    worldLessonCounts,
+    worldQuizBest,
+  };
+}
+
+// ────────────────── Scoped unlock context (criteria-driven) ─────────────────
+
+/**
+ * Builds an UnlockContext that only fetches the data the given criteria can
+ * actually read. Critically faster on pooler-serialized databases than
+ * buildUnlockContext when the criteria are narrow (e.g. games that only gate
+ * on lessonsCompleted + level).
+ */
+type CtxGroup =
+  | "user"
+  | "lessons"
+  | "quizzes"
+  | "courses"
+  | "games"
+  | "achievements"
+  | "worlds"
+  | "projects"
+  | "certs"
+  | "worldContent";
+
+const CRITERIA_GROUPS: Record<string, CtxGroup[]> = {
+  levelReached: ["user"],
+  xpReached: ["user"],
+  streakReached: ["user"],
+  lessonsCompleted: ["lessons"],
+  quizzesPassed: ["quizzes"],
+  courseCompleted: ["courses"],
+  gameBeaten: ["games"],
+  gamePerfect: ["games"],
+  projectsApproved: ["projects"],
+  certificatesEarned: ["certs"],
+  achievementEarned: ["achievements"],
+  lessonInWorld: ["worlds", "worldContent"],
+  quizScoreInWorld: ["worlds", "worldContent"],
+  masteryReached: ["worlds"],
+  worldCompleted: ["worlds"],
+  bossDefeated: ["worlds"],
+};
+
+function collectCtxGroups(criteria: UnlockCriteria | null | undefined, out: Set<CtxGroup>): void {
+  if (!criteria) return;
+  if (criteria.kind === "allOf" || criteria.kind === "anyOf") {
+    for (const c of criteria.criteria) collectCtxGroups(c, out);
+    return;
+  }
+  const groups = CRITERIA_GROUPS[criteria.kind];
+  if (groups) for (const g of groups) out.add(g);
+}
+
+export async function buildUnlockContextFor(
+  userId: string,
+  criteriaList: (UnlockCriteria | null | undefined)[]
+): Promise<UnlockContext> {
+  const groups = new Set<CtxGroup>();
+  for (const c of criteriaList) collectCtxGroups(c, groups);
+  groups.add("user");
+
+  const [
+    user,
+    lessonsCompleted,
+    quizRows,
+    enrollments,
+    gameRows,
+    achievements,
+    worldProgress,
+    worlds,
+    lessonRows,
+    projectsApproved,
+    certificatesEarned,
+  ] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { level: true, xp: true, streak: true } }),
+    groups.has("lessons") ? prisma.lessonProgress.count({ where: { userId, status: "COMPLETED" } }) : Promise.resolve(0),
+    groups.has("quizzes") || groups.has("worldContent") ? prisma.quizAttempt.findMany({
+      where: { userId, quiz: { course: { is: { status: "PUBLISHED" } } } },
+      select: { score: true, maxScore: true, passed: true, quiz: { select: { courseId: true } } },
+    }) : Promise.resolve([]),
+    groups.has("courses") ? prisma.enrollment.findMany({
+      where: { userId, status: "COMPLETED" },
+      select: { course: { select: { slug: true } } },
+    }) : Promise.resolve([] as { course: { slug: string } }[]),
+    groups.has("games") ? prisma.game.findMany({
+      where: { isActive: true },
+      select: {
+        slug: true,
+        levels: { where: { isActive: true }, select: { id: true } },
+        progress: { where: { userId }, select: { levelId: true, status: true } },
+      },
+    }) : Promise.resolve([]),
+    groups.has("achievements") ? prisma.userAchievement.findMany({ where: { userId }, select: { achievement: { select: { key: true } } } }) : Promise.resolve([]),
+    groups.has("worlds") ? prisma.userWorldProgress.findMany({ where: { userId }, select: { worldId: true, masteryPercent: true, bossDefeated: true, certificateEarned: true } }) : Promise.resolve([]),
+    groups.has("worlds") || groups.has("worldContent") ? prisma.world.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+      select: { id: true, key: true, courseSlugs: true },
+    }) : Promise.resolve([]),
+    groups.has("worldContent") ? prisma.lessonProgress.findMany({
+      where: { userId, status: "COMPLETED" },
+      select: { lesson: { select: { courseId: true } } },
+    }) : Promise.resolve([]),
+    groups.has("projects") ? prisma.projectSubmission.count({ where: { userId, status: "APPROVED" } }) : Promise.resolve(0),
+    groups.has("certs") ? prisma.certificate.count({ where: { userId } }) : Promise.resolve(0),
+  ]);
+
+  let courses: { id: string; slug: string }[] = [];
+  const worldLessonCounts: Record<string, number> = {};
+  const worldQuizBest: Record<string, number> = {};
+  if (groups.has("worldContent")) {
+    const allSlugs = [...new Set(worlds.flatMap((w) => (w.courseSlugs as string[]) ?? []))];
+    courses = allSlugs.length > 0 ? await prisma.course.findMany({ where: { slug: { in: allSlugs } }, select: { id: true, slug: true } }) : [];
+    const slugToId = new Map(courses.map((c) => [c.slug, c.id]));
+    const lessonCountByCourse = new Map<string, number>();
+    for (const r of lessonRows) lessonCountByCourse.set(r.lesson.courseId, (lessonCountByCourse.get(r.lesson.courseId) ?? 0) + 1);
+    const bestByCourse = new Map<string, number>();
+    for (const a of quizRows) {
+      if (a.maxScore <= 0) continue;
+      const pct = Math.round((a.score / a.maxScore) * 100);
+      if (pct > (bestByCourse.get(a.quiz.courseId ?? "") ?? 0)) bestByCourse.set(a.quiz.courseId ?? "", pct);
+    }
+    for (const w of worlds) {
+      const ids = ((w.courseSlugs as string[]) ?? []).map((s) => slugToId.get(s)).filter((id): id is string => !!id);
+      worldLessonCounts[w.key] = ids.reduce((sum, id) => sum + (lessonCountByCourse.get(id) ?? 0), 0);
+      worldQuizBest[w.key] = ids.reduce((sum, id) => Math.max(sum, bestByCourse.get(id) ?? 0), 0);
+    }
+  }
+
+  const worldCtx: UnlockContext["worlds"] = {};
+  const worldById = new Map(worlds.map((w) => [w.id, w]));
+  for (const wp of worldProgress) {
+    const world = worldById.get(wp.worldId);
+    if (!world) continue;
+    worldCtx[world.key] = {
+      masteryPercent: wp.masteryPercent,
+      completed: wp.bossDefeated && wp.certificateEarned,
+      bossDefeated: wp.bossDefeated,
+    };
+  }
+
+  const perfectSlugs = new Set<string>();
+  const beatenSlugs = new Set<string>();
+  for (const g of gameRows) {
+    if (g.levels.length === 0) continue;
+    const done = new Set(g.progress.filter((p) => p.status === "BEATEN" || p.status === "PERFECT").map((p) => p.levelId));
+    const allPerfect = g.levels.every((l) => g.progress.some((p) => p.levelId === l.id && p.status === "PERFECT"));
+    if (g.levels.every((l) => done.has(l.id))) {
+      beatenSlugs.add(g.slug);
+      if (allPerfect) perfectSlugs.add(g.slug);
+    }
+  }
+
+  return {
+    level: user?.level ?? 1,
+    xp: user?.xp ?? 0,
+    streak: user?.streak ?? 0,
+    lessonsCompleted,
+    quizzesPassed: quizRows.filter((a) => a.passed).length,
+    coursesCompleted: enrollments.map((e) => e.course.slug),
+    gamesBeaten: [...beatenSlugs],
+    gamesPerfect: [...perfectSlugs],
+    projectsApproved,
+    certificatesEarned,
     achievementsEarned: achievements.map((a) => a.achievement.key),
     worlds: worldCtx,
     worldLessonCounts,
@@ -558,15 +746,62 @@ export type WorldMapItem = {
   bossGame: { slug: string; name: string; icon: string } | null;
 };
 
-export async function loadWorldMap(userId: string): Promise<WorldMapItem[]> {
-  const worlds = await prisma.world.findMany({ where: { isActive: true }, orderBy: { order: "asc" } });
-  const [progressRows, gameRows, courseRows] = await Promise.all([
+type WorldRow = Awaited<ReturnType<typeof prisma.world.findMany>>[number];
+
+type WorldMapShared = {
+  ctx: UnlockContext;
+  courseIdsByWorld: Map<string, string[]>;
+  lessonCountsByCourse: Map<string, number>;
+  quizCountsByCourse: Map<string, number>;
+  projectCountsByCourse: Map<string, number>;
+  gameRows: { slug: string; name: string; icon: string; worldId: string | null; isBoss: boolean }[];
+  courseRows: { id: string; slug: string; title: string }[];
+  progressRows: Awaited<ReturnType<typeof prisma.userWorldProgress.findMany>>;
+};
+
+/** Fetches everything the world map/detail pages need in a handful of parallel queries. */
+async function loadWorldMapShared(userId: string, worlds: WorldRow[]): Promise<WorldMapShared> {
+  const [progressRows, gameRows, courseRows, ctx, lessonRows, quizRows, projectRows] = await Promise.all([
     prisma.userWorldProgress.findMany({ where: { userId } }),
     prisma.game.findMany({ where: { isActive: true }, select: { slug: true, name: true, icon: true, worldId: true, isBoss: true } }),
     prisma.course.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, title: true, id: true } }),
+    buildUnlockContext(userId),
+    prisma.lesson.findMany({ where: { isPublished: true, course: { status: "PUBLISHED" } }, select: { courseId: true } }),
+    prisma.quiz.findMany({ where: { isPublished: true, course: { status: "PUBLISHED" } }, select: { courseId: true } }),
+    prisma.project.findMany({ where: { isPublished: true, course: { status: "PUBLISHED" } }, select: { courseId: true } }),
   ]);
 
-  const ctx = await buildUnlockContext(userId);
+  const slugToId = new Map(courseRows.map((c) => [c.slug, c.id]));
+  const courseIdsByWorld = new Map<string, string[]>();
+  for (const w of worlds) {
+    const ids = ((w.courseSlugs as string[]) ?? []).map((s) => slugToId.get(s)).filter((id): id is string => !!id);
+    courseIdsByWorld.set(w.id, ids);
+  }
+
+  const countByCourse = (rows: { courseId: string | null }[]) => {
+    const m = new Map<string, number>();
+    for (const r of rows) if (r.courseId) m.set(r.courseId, (m.get(r.courseId) ?? 0) + 1);
+    return m;
+  };
+
+  return {
+    ctx,
+    courseIdsByWorld,
+    lessonCountsByCourse: countByCourse(lessonRows),
+    quizCountsByCourse: countByCourse(quizRows),
+    projectCountsByCourse: countByCourse(projectRows),
+    gameRows,
+    courseRows,
+    progressRows,
+  };
+}
+
+function sumCourseCounts(ids: string[], m: Map<string, number>): number {
+  return ids.reduce((sum, id) => sum + (m.get(id) ?? 0), 0);
+}
+
+function buildWorldMapItems(worlds: WorldRow[], shared: WorldMapShared): WorldMapItem[] {
+  const { ctx, courseIdsByWorld, lessonCountsByCourse, quizCountsByCourse, projectCountsByCourse, gameRows, courseRows, progressRows } = shared;
   const gamesByWorld = new Map<string, { slug: string; name: string; icon: string }[]>();
   const bossByWorld = new Map<string, { slug: string; name: string; icon: string }>();
   for (const g of gameRows) {
@@ -587,8 +822,14 @@ export async function loadWorldMap(userId: string): Promise<WorldMapItem[]> {
     const isFirst = i === 0;
     const wp = progressByWorld.get(world.id);
     const unlocked = isFirst || !!wp || evaluateUnlock(world.unlockCriteria as never, ctx);
-    const courseIds = await worldCourseIds(world.id);
-    const counts = await worldContentCounts(world.id, courseIds);
+    const courseIds = courseIdsByWorld.get(world.id) ?? [];
+    const counts: WorldContentCounts = {
+      lessonsTotal: sumCourseCounts(courseIds, lessonCountsByCourse),
+      quizzesTotal: sumCourseCounts(courseIds, quizCountsByCourse),
+      projectsTotal: sumCourseCounts(courseIds, projectCountsByCourse),
+      gamesTotal: (gamesByWorld.get(world.id) ?? []).length,
+      bossTotal: bossByWorld.has(world.id) ? 1 : 0,
+    };
     const state: WorldProgressState = {
       status: wp?.status ?? WORLD_STATUS.LOCKED,
       lessonPoints: wp?.lessonPoints ?? 0,
@@ -648,6 +889,12 @@ export async function loadWorldMap(userId: string): Promise<WorldMapItem[]> {
   return items;
 }
 
+export async function loadWorldMap(userId: string): Promise<WorldMapItem[]> {
+  const worlds = await prisma.world.findMany({ where: { isActive: true }, orderBy: { order: "asc" } });
+  const shared = await loadWorldMapShared(userId, worlds);
+  return buildWorldMapItems(worlds, shared);
+}
+
 export type WorldDetailResult = {
   world: WorldMapItem;
   nextWorld: WorldMapItem | null;
@@ -681,17 +928,19 @@ export type WorldDetailResult = {
 
 /** Loads a single world with every content surface needed by the detail page. */
 export async function loadWorldDetail(userId: string, slug: string): Promise<WorldDetailResult | null> {
-  const world = await prisma.world.findUnique({ where: { slug }, include: { certificates: { where: { userId } } } });
+  const worlds = await prisma.world.findMany({ where: { isActive: true }, orderBy: { order: "asc" } });
+  const world = worlds.find((w) => w.slug === slug) ?? null;
   if (!world) return null;
 
-  const map = await loadWorldMap(userId);
-  const item = map.find((w) => w.slug === slug) ?? null;
+  const shared = await loadWorldMapShared(userId, worlds);
+  const items = buildWorldMapItems(worlds, shared);
+  const item = items.find((w) => w.slug === slug) ?? null;
   if (!item) return null;
-  const nextWorld = map.find((w) => w.order > item.order) ?? null;
+  const nextWorld = items.find((w) => w.order > item.order) ?? null;
 
-  const ctx = await buildUnlockContext(userId);
-  const courseIds = await worldCourseIds(world.id);
-  const [courses, gameRows, quizBest, levelRows] = await Promise.all([
+  const { ctx, courseIdsByWorld, lessonCountsByCourse } = shared;
+  const courseIds = courseIdsByWorld.get(world.id) ?? [];
+  const [courses, gameRows, quizBest, levelRows, certificates] = await Promise.all([
     courseIds.length > 0
       ? prisma.course.findMany({ where: { id: { in: courseIds }, status: "PUBLISHED" }, select: { id: true, slug: true, title: true }, orderBy: { order: "asc" } })
       : [],
@@ -705,6 +954,7 @@ export async function loadWorldDetail(userId: string, slug: string): Promise<Wor
     }),
     courseIds.length > 0 ? prisma.quizAttempt.findMany({ where: { quiz: { courseId: { in: courseIds } } }, select: { score: true, maxScore: true } }) : [],
     courseIds.length > 0 ? prisma.lessonProgress.findMany({ where: { userId, lesson: { courseId: { in: courseIds } }, status: "COMPLETED" }, select: { lesson: { select: { courseId: true } } } }) : [],
+    prisma.worldCertificate.findMany({ where: { userId, worldId: world.id }, select: { code: true, title: true, issuedAt: true } }),
   ]);
 
   const bestQuizPct = quizBest.reduce((best, a) => {
@@ -715,12 +965,8 @@ export async function loadWorldDetail(userId: string, slug: string): Promise<Wor
   const courseTotals: Record<string, number> = {};
   const courseDone: Record<string, number> = {};
   for (const id of courseIds) {
-    courseTotals[id] = 0;
+    courseTotals[id] = lessonCountsByCourse.get(id) ?? 0;
     courseDone[id] = 0;
-  }
-  if (courseIds.length > 0) {
-    const rows = await prisma.lesson.findMany({ where: { courseId: { in: courseIds }, isPublished: true }, select: { id: true, courseId: true } });
-    for (const r of rows) courseTotals[r.courseId] = (courseTotals[r.courseId] ?? 0) + 1;
   }
   for (const r of levelRows) courseDone[r.lesson.courseId] = (courseDone[r.lesson.courseId] ?? 0) + 1;
 
@@ -763,6 +1009,6 @@ export async function loadWorldDetail(userId: string, slug: string): Promise<Wor
     games,
     courses: courses.map((c) => ({ slug: c.slug, title: c.title, completed: courseDone[c.id] ?? 0, total: courseTotals[c.id] ?? 0 })),
     quizBest: bestQuizPct,
-    certificates: world.certificates.map((c) => ({ code: c.code, title: c.title, issuedAt: c.issuedAt })),
+    certificates: certificates.map((c) => ({ code: c.code, title: c.title, issuedAt: c.issuedAt })),
   };
 }
