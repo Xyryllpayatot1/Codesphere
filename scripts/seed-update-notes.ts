@@ -50,7 +50,7 @@ async function main() {
       where: { id: existing.id },
       data: {
         title: "The CodeSphere 0.8 Update — Worlds, Networks & Collaboration",
-        summary: "Dive into the world map, build live networks in the Lab, and team up in real-time rooms.",
+        summary: "Explore the world map, build live networks in the Lab, and team up in real-time rooms.",
         description:
           "This is the big one. The 0.8 update turns learning into an adventure: progress through the programming worlds, battle bosses to unlock new territory, build real networks in the Lab, and collaborate in live rooms. Your dashboard now tracks study time, streaks and daily missions, and every change lands in these update notes.",
         releaseDate: new Date(),
@@ -67,7 +67,7 @@ async function main() {
       data: {
         version: VERSION,
         title: "The CodeSphere 0.8 Update — Worlds, Networks & Collaboration",
-        summary: "Dive into the world map, build live networks in the Lab, and team up in real-time rooms.",
+        summary: "Explore the world map, build live networks in the Lab, and team up in real-time rooms.",
         description:
           "This is the big one. The 0.8 update turns learning into an adventure: progress through the programming worlds, battle bosses to unlock new territory, build real networks in the Lab, and collaborate in live rooms. Your dashboard now tracks study time, streaks and daily missions, and every change lands in these update notes.",
         releaseDate: new Date(),

@@ -28,7 +28,7 @@ const MODES = [
   {
     href: "/prompts",
     title: "Prompt Studio",
-    description: "Practice writing clear instructions for AI — a skill that makes you 10x more productive.",
+    description: "Practice writing clear instructions for AI — a skill that saves you real time.",
     icon: Sparkles,
     color: "#f59e0b",
   },

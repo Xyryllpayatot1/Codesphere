@@ -11,12 +11,12 @@ const createSchema = z
   })
   .strict();
 
-export const GET = handle(async (_req, _ctx) => {
+export const GET = handle(async () => {
   const session = await requireSession();
   return listNetProjects(session.id);
 });
 
-export const POST = handle(async (req, _ctx) => {
+export const POST = handle(async (req) => {
   const session = await requireSession();
   const parsed = createSchema.safeParse(await readJson(req));
   if (!parsed.success) throw new ApiError("Invalid project data", 400);

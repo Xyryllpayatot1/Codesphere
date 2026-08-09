@@ -132,7 +132,7 @@ export default async function LearnPage() {
                   <Compass className="h-7 w-7 text-muted-foreground/40" />
                   <p className="text-sm font-medium">This track is on the way</p>
                   <p className="max-w-sm text-xs text-muted-foreground">
-                    New courses for {track.label} are being written. Until then, the {userTrack === track.id ? "Web Development" : "Web Development"} track is a great place to start.
+                    New courses for this track are on the way. Until then, the Web Development track is a great place to start.
                   </p>
                 </CardContent>
               </Card>

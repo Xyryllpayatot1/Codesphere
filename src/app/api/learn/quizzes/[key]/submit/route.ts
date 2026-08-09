@@ -37,12 +37,12 @@ export const POST = handle(async (req, ctx) => {
   const userBefore = await prisma.user.findUnique({ where: { id: session.id }, select: { xp: true } });
   const levelBefore = levelFromXp(userBefore?.xp ?? 0).level;
 
-  await recordQuizAttempt(session.id, quiz.id, quiz.lessonId, grade.score, grade.maxScore, answers, grade.passed);
+  const { firstPass } = await recordQuizAttempt(session.id, quiz.id, quiz.lessonId, grade.score, grade.maxScore, answers, grade.passed);
 
   const userAfter = await prisma.user.findUnique({ where: { id: session.id }, select: { xp: true, streak: true } });
   const levelAfter = levelFromXp(userAfter?.xp ?? 0).level;
 
-  const xpEarned = grade.passed ? XP.QUIZ_PASS : 0;
+  const xpEarned = grade.passed && firstPass ? XP.QUIZ_PASS : 0;
 
   return {
     percentage: grade.percentage,

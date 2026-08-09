@@ -72,18 +72,25 @@ export async function submitNetMission(userId: string, slug: string, snapshot: S
     return { passed: false, message: result.message, hints: result.hints, firstTime: false, xpAwarded: 0, coinsAwarded: 0, levelUp: null };
   }
 
-  const existing = await prisma.networkMissionProgress.findUnique({ where: { userId_slug: { userId, slug } } });
-  const firstTime = existing?.status !== "COMPLETED";
+  // Ensure a progress row exists so the atomic claim below can match it.
+  await prisma.networkMissionProgress.upsert({
+    where: { userId_slug: { userId, slug } },
+    create: { userId, slug, status: "IN_PROGRESS" },
+    update: {},
+  });
+
+  // Atomically claim the first completion. If two submissions race, only one
+  // updateMany matches a non-completed row, so the mission is never rewarded twice.
+  const claimed = await prisma.networkMissionProgress.updateMany({
+    where: { userId, slug, status: { not: "COMPLETED" } },
+    data: { status: "COMPLETED", completedAt: new Date() },
+  });
+  const firstTime = claimed.count > 0;
 
   let xpAwarded = 0;
   let coinsAwarded = 0;
   if (firstTime) {
     const before = await prisma.user.findUnique({ where: { id: userId }, select: { level: true } });
-    await prisma.networkMissionProgress.upsert({
-      where: { userId_slug: { userId, slug } },
-      create: { userId, slug, status: "COMPLETED", completedAt: new Date() },
-      update: { status: "COMPLETED", completedAt: new Date() },
-    });
     await prisma.activity.create({
       data: { userId, type: ACTIVITY_TYPES.NET_MISSION_COMPLETED, data: { mission: slug, title: mission.title } },
     });

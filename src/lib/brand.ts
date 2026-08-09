@@ -12,18 +12,18 @@ export const BRAND_TAGLINE = "Learn. Build. Experiment.";
 
 /** Official product description. */
 export const BRAND_DESCRIPTION =
-  "CodeSphere is an educational technology platform designed to strengthen the technical and digital skills of students through interactive programming lessons, hands-on exercises, gamified learning, and virtual networking laboratories.";
+  "CodeSphere is a learning platform for programming, web development, and networking. Lessons are interactive, exercises are hands-on, and you practice in a live browser — no installs, no video-only lectures.";
 
 /** Official mission statement. */
 export const BRAND_MISSION =
-  "CodeSphere aims to make technical education more practical, accessible, and engaging by helping students develop programming, web development, networking, and digital technology skills through interactive learning and hands-on experimentation.";
+  "Our goal is simple: make technical education practical and accessible. We want students to learn programming, web development, and networking by actually doing the work — not just reading about it.";
 
 /** Vision statement. */
 export const BRAND_VISION =
-  "A world where every student can build practical technical skills — not just read about them — by learning through doing in a safe, honest, and engaging environment.";
+  "A world where every student can build real technical skills by doing — in an environment that's safe, honest, and engaging.";
 
 /** One-line brand promise used in the footer. */
-export const BRAND_FOOTER_LINE = "Practical technology education for the next generation.";
+export const BRAND_FOOTER_LINE = "Hands-on technology education for students.";
 
 export const CREATOR_NAME = "Jhon Xyryll Samoy";
 export const CREATOR_ROLE = "Founder & Lead Developer";
@@ -31,7 +31,7 @@ export const CREATOR_TITLES = ["Head of Team Xy", "ICT Club President 2026"];
 
 /** Short creator description for the About and Credits pages. */
 export const CREATOR_SHORT_DESC =
-  "CodeSphere was conceived and led as a student-driven educational technology project focused on helping learners build practical technical skills through hands-on digital experiences.";
+  "CodeSphere started as a student project, led by Jhon Xyryll Samoy, to help learners build practical technical skills by doing real work.";
 
 /** Transparency note about AI-assisted development. */
 export const AI_ASSISTED_DISCLOSURE =

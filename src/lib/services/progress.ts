@@ -20,7 +20,7 @@ export async function touchLesson(userId: string, lessonId: string): Promise<voi
   await prisma.lessonProgress.upsert({
     where: { userId_lessonId: { userId, lessonId } },
     create: { userId, lessonId, status: LESSON_STATUS.IN_PROGRESS, startedAt: new Date(), lastAccessedAt: new Date() },
-    update: { status: LESSON_STATUS.IN_PROGRESS, lastAccessedAt: new Date() },
+    update: { lastAccessedAt: new Date() },
   });
 }
 
@@ -77,7 +77,6 @@ export async function recordExerciseResult(
     update: {
       exercisesCompleted: submissions,
       exercisesTotal: total,
-      status: LESSON_STATUS.IN_PROGRESS,
       lastAccessedAt: new Date(),
       progressPercent: Math.max(progress?.progressPercent ?? 0, computeLessonPercent(submissions, total)),
     },
@@ -97,12 +96,18 @@ export async function recordQuizAttempt(
   passed: boolean
 ) {
   const quiz = await prisma.quiz.findUnique({ where: { id: quizId }, select: { courseId: true } });
+  // XP/coins/missions are only ever awarded once — on the first passing attempt.
+  const existingPass = await prisma.quizAttempt.findFirst({
+    where: { userId, quizId, passed: true },
+    select: { id: true },
+  });
   const attempt = await prisma.quizAttempt.create({
     data: { userId, quizId, score, maxScore, passed, answers: answers as never },
     select: { id: true, passed: true, score: true, maxScore: true },
   });
+  const firstPass = passed && !existingPass;
 
-  if (passed) {
+  if (firstPass) {
     await prisma.activity.create({
       data: {
         userId,
@@ -128,7 +133,7 @@ export async function recordQuizAttempt(
       data: { quizId, score, maxScore, perfect },
     });
     await progressMission(userId, MISSION_TYPES.PASS_QUIZ, 1);
-  } else {
+  } else if (!passed) {
     await prisma.activity.create({
       data: { userId, type: ACTIVITY_TYPES.QUIZ_FAILED, lessonId, data: { quizId, score, maxScore } },
     });
@@ -138,7 +143,7 @@ export async function recordQuizAttempt(
   const perfect = maxScore > 0 && score >= maxScore;
   await recordWorldQuiz(userId, quizId, quiz?.courseId ?? null, passed, perfect);
 
-  return { attempt, passed, firstPass: passed };
+  return { attempt, passed, firstPass };
 }
 
 export function computeLessonPercent(exercisesCompleted: number, exercisesTotal: number): number {
@@ -197,22 +202,28 @@ export async function completeLesson(userId: string, lessonId: string) {
     return { completed: true, reason: "already_completed" } as const;
   }
 
+  // Ensure the row exists so the atomic claim below can match it.
+  await prisma.lessonProgress.upsert({
+    where: { userId_lessonId: { userId, lessonId } },
+    create: { userId, lessonId, status: LESSON_STATUS.IN_PROGRESS, startedAt: new Date(), lastAccessedAt: new Date() },
+    update: { lastAccessedAt: new Date() },
+  });
+
+  // Atomically claim the COMPLETED transition. If two requests race (e.g.
+  // double-clicking "Complete lesson"), only one updateMany matches a
+  // non-completed row, so XP/streak/activities are never awarded twice.
+  const claimed = await prisma.lessonProgress.updateMany({
+    where: { userId, lessonId, status: { not: LESSON_STATUS.COMPLETED } },
+    data: { status: LESSON_STATUS.COMPLETED, progressPercent: 100, completedAt: new Date(), lastAccessedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return { completed: true, reason: "already_completed" } as const;
+  }
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const streak = updateStreak(user?.streak ?? 0, user?.longestStreak ?? 0, user?.lastActiveAt ?? null);
 
   await prisma.$transaction([
-    prisma.lessonProgress.upsert({
-      where: { userId_lessonId: { userId, lessonId } },
-      create: {
-        userId,
-        lessonId,
-        status: LESSON_STATUS.COMPLETED,
-        progressPercent: 100,
-        completedAt: new Date(),
-        lastAccessedAt: new Date(),
-      },
-      update: { status: LESSON_STATUS.COMPLETED, progressPercent: 100, completedAt: new Date(), lastAccessedAt: new Date() },
-    }),
     prisma.user.update({
       where: { id: userId },
       data: {

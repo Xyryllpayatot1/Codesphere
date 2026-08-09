@@ -73,7 +73,7 @@ export function AboutContent() {
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-warning/10 text-warning">
               <HelpCircle className="h-5 w-5" />
             </span>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight">The problem we aim to address</h2>
+            <h2 className="mt-4 text-2xl font-bold tracking-tight">Why CodeSphere exists</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Too much technical education stays passive — video-only lectures, static reading and theory that
               rarely becomes skill. Many students finish courses knowing facts about code but without the
@@ -88,8 +88,8 @@ export function AboutContent() {
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Every learner gets a live playground, hands-on exercises, quizzes and real projects instead of
               watching from the sidelines. Structured courses, gamified progress and virtual networking
-              laboratories make learning practical and responsible — students experiment safely and build
-              skills they can actually use.
+              laboratories make learning hands-on — students experiment safely and build skills they can
+              actually use.
             </p>
           </div>
         </div>
