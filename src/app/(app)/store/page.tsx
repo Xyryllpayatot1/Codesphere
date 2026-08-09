@@ -1,4 +1,4 @@
-import { Store } from "lucide-react";
+import { Coins, Store } from "lucide-react";
 
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -57,7 +57,9 @@ export default async function StorePage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Spend CodeCoins earned through learning on cosmetics. Your balance:{" "}
-          <span className="font-semibold text-amber-600">🪙 {user?.coins.toLocaleString() ?? 0}</span>
+          <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+            <Coins className="h-4 w-4" /> {user?.coins.toLocaleString() ?? 0}
+          </span>
         </p>
       </div>
 

@@ -64,7 +64,7 @@ export function CompleteLessonButton({
           description: `+${result.xpAwarded ?? 0} XP${result.course?.certificate ? ` · Certificate ${result.course.certificate.code}` : ""}`,
           variant: "success",
         });
-        if (result.streak) toast({ title: `🔥 ${result.streak.streak}-day streak`, variant: "streak" });
+        if (result.streak) toast({ title: `${result.streak.streak}-day streak`, variant: "streak" });
         for (const name of result.newAchievements ?? []) {
           toast({ title: `Achievement unlocked: ${name}`, variant: "success" });
         }

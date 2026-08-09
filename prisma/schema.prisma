@@ -498,6 +498,13 @@ model UserSetting {
   learningMode       String    @default("READING")
   // Instructors teach first: practice stays locked until the teaching is reviewed.
   instructorMode     Boolean   @default(false)
+  // Onboarding "learning path" chosen at registration — see /onboarding.
+  // FUNDAMENTALS | WEB | PYTHON | NETWORKING | GAME_DEV | DATA
+  learningPath       String?
+  // Self-reported experience at onboarding: NONE | LITTLE | COMFORTABLE
+  experience         String?
+  // Set once the user finishes onboarding.
+  onboardedAt        DateTime?
   notifications      Json    
   emailNotifications Boolean   @default(true)
   createdAt          DateTime  @default(now())

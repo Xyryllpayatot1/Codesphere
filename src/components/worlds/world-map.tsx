@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, Check, ChevronRight, Lock, MapPin, Skull, Trophy } from "lucide-react";
+import { Award, BookOpen, Check, ChevronRight, ClipboardList, Gamepad2, Lock, MapPin, Skull, Trophy, Wrench } from "lucide-react";
 import { WORLD_STATUS } from "@/lib/constants";
 import type { WorldMapItem } from "@/lib/engine/worlds";
 import { cn } from "@/lib/utils";
@@ -115,10 +115,10 @@ export function WorldCard({ world }: { world: WorldMapItem }) {
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground sm:grid-cols-4">
-                <span className="rounded-md bg-muted/60 px-2 py-1">📚 Lessons {world.progress.lessons.done}/{world.progress.lessons.total}</span>
-                <span className="rounded-md bg-muted/60 px-2 py-1">🎮 Games {world.progress.games.done}/{world.progress.games.total}</span>
-                <span className="rounded-md bg-muted/60 px-2 py-1">📝 Quizzes {world.progress.quizzes.done}/{world.progress.quizzes.total}</span>
-                <span className="rounded-md bg-muted/60 px-2 py-1">🛠️ Projects {world.progress.projects.done}/{world.progress.projects.total}</span>
+                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-1"><BookOpen className="h-3 w-3" /> Lessons {world.progress.lessons.done}/{world.progress.lessons.total}</span>
+                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-1"><Gamepad2 className="h-3 w-3" /> Games {world.progress.games.done}/{world.progress.games.total}</span>
+                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-1"><ClipboardList className="h-3 w-3" /> Quizzes {world.progress.quizzes.done}/{world.progress.quizzes.total}</span>
+                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-1"><Wrench className="h-3 w-3" /> Projects {world.progress.projects.done}/{world.progress.projects.total}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 text-xs">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GraduationCap, Lock, Unlock } from "lucide-react";
+import { BookOpen, GraduationCap, Lock, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ContentBlock } from "@/lib/content/types";
 import {
@@ -150,8 +150,8 @@ export function LessonModePanel({
 
       {recap.length > 0 && (
         <details className="my-6 rounded-xl border border-border bg-card">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-            📖 Teaching recap ({recap.length} {recap.length === 1 ? "section" : "sections"}) — expand to read the full concept first
+          <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <BookOpen className="h-4 w-4 text-primary" /> Teaching recap ({recap.length} {recap.length === 1 ? "section" : "sections"}) — expand to read the full concept first
           </summary>
           <div className="border-t border-border p-4">
             <LessonBlocks blocks={recap} />

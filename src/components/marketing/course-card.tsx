@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_LABELS } from "@/lib/constants";
@@ -24,7 +25,7 @@ export function CourseCard({ course }: { course: CourseCardData }) {
         <div className="flex flex-1 flex-col p-5">
           <div className="mb-3 flex items-center justify-between">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg text-lg" style={{ background: `${course.color}22`, color: course.color }}>
-              {course.icon ?? "📘"}
+              {course.icon ?? <BookOpen className="h-5 w-5" />}
             </span>
             {course.category && <Badge variant="secondary">{course.category.name}</Badge>}
           </div>

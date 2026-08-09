@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Avatar } from "@/components/ui/avatar";
 import { cn, timeAgo } from "@/lib/utils";
 import type { ShellUser } from "@/components/layout/sidebar";
+import { SearchDialog } from "@/components/layout/search-dialog";
 
 type NotificationItem = {
   id: string;
@@ -69,6 +70,8 @@ export function Header({ user, onMenuClick }: { user: ShellUser; onMenuClick: ()
       </button>
 
       <div className="flex-1" />
+
+      <SearchDialog />
 
       <span className="hidden items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-1 text-xs font-semibold text-orange-500 sm:inline-flex">
         <Flame className="h-3.5 w-3.5" />

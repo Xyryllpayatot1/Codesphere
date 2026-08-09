@@ -77,7 +77,7 @@ export function GameCard({ game }: { game: GameCardData }) {
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{game.estimatedMinutes} min</span>
-            <span className="inline-flex items-center gap-1"><Medal className="h-3.5 w-3.5" />{game.xpReward} XP{game.rewardCoins > 0 ? ` · 🪙${game.rewardCoins}` : ""}</span>
+            <span className="inline-flex items-center gap-1"><Medal className="h-3.5 w-3.5" />{game.xpReward} XP{game.rewardCoins > 0 ? ` · ${game.rewardCoins} coins` : ""}</span>
             <span>{game.difficulty.toLowerCase()}</span>
           </div>
 

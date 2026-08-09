@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Award, BookOpen, ChevronRight, Gamepad2, Lock, MapPin, Skull, Trophy } from "lucide-react";
+import { Award, BookOpen, ChevronRight, Coins, Gamepad2, Lock, MapPin, Skull, Trophy } from "lucide-react";
 
 import { requireSession } from "@/lib/auth";
 import { loadWorldDetail } from "@/lib/engine/worlds";
@@ -100,7 +100,9 @@ export default async function WorldDetailPage({ params }: { params: Promise<{ sl
             <h2 className="mt-0.5 text-lg font-bold">{boss.name}</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">{boss.description}</p>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              {boss.levelsBeaten}/{boss.levelsTotal} levels beaten · +{boss.xpReward} XP per level · 🪙{boss.rewardCoins} first-beat bonus
+              {boss.levelsBeaten}/{boss.levelsTotal} levels beaten · +{boss.xpReward} XP per level ·{" "}
+              <Coins className="mr-0.5 inline h-3 w-3 text-warning" />
+              {boss.rewardCoins} first-beat bonus
             </p>
           </div>
           {world.unlocked ? (

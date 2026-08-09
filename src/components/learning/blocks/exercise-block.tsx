@@ -331,7 +331,7 @@ export function ExerciseBlock({ exerciseKey, title }: { exerciseKey: string; tit
               <pre className="mt-2 overflow-x-auto rounded-md bg-background p-3 font-mono text-xs">{result.result.output}</pre>
             )}
             {result.result.passed && (
-              <p className="mt-2 text-sm text-success">+{result.xpEarned} XP · {result.streak ? `🔥 ${result.streak}-day streak` : "Nice work!"}</p>
+              <p className="mt-2 text-sm text-success">+{result.xpEarned} XP · {result.streak ? `${result.streak}-day streak` : "Nice work!"}</p>
             )}
           </div>
         )}

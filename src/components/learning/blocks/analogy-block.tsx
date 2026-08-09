@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Home, Laptop } from "lucide-react";
 import type { ContentBlock } from "@/lib/content/types";
 
 type Analogy = Extract<ContentBlock, { type: "analogy" }>;
@@ -14,12 +14,12 @@ export function AnalogyBlock({ block }: { block: Analogy }) {
         {block.mapping.map((row, i) => (
           <div key={i} className="grid gap-2 bg-background/60 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
             <div className="text-sm text-foreground/80">
-              <span className="mr-1.5 text-muted-foreground">🏠</span>
+              <Home className="mr-1.5 inline h-4 w-4 text-muted-foreground" />
               {row.real}
             </div>
             <ArrowRight className="hidden h-4 w-4 text-primary sm:block" />
             <div className="text-sm font-medium text-foreground">
-              <span className="mr-1.5 text-primary">💻</span>
+              <Laptop className="mr-1.5 inline h-4 w-4 text-primary" />
               {row.concept}
             </div>
           </div>

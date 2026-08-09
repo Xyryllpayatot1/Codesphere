@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Award, CheckCircle2, Clock, Flame, Lock, Medal, Skull, Star, Trophy } from "lucide-react";
+import { Award, CheckCircle2, Clock, Coins, Flame, Lock, Medal, Skull, Star, Trophy } from "lucide-react";
 import { GAME_LEVEL_STATUS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
@@ -118,7 +118,7 @@ export function GameDetail({
             <span className="inline-flex items-center gap-1"><Medal className="h-3.5 w-3.5" />{total} levels</span>
             {game.isBoss && (
               <span className="inline-flex items-center gap-1 font-semibold text-warning">
-                <Skull className="h-3.5 w-3.5" />+{game.bossBonusXp} XP · 🪙{game.bossBonusCoins} first beat
+                <Skull className="h-3.5 w-3.5" />+{game.bossBonusXp} XP · <Coins className="h-3.5 w-3.5" />{game.bossBonusCoins} first beat
               </span>
             )}
           </div>

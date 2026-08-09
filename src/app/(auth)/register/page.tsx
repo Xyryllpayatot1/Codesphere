@@ -41,7 +41,7 @@ export default function RegisterPage() {
         setError(json.error ?? "Unable to create account");
         return;
       }
-      router.push("/dashboard");
+      router.push("/onboarding");
       router.refresh();
     } catch {
       setError("Network error. Please try again.");

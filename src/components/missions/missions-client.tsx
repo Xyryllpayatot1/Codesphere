@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Target } from "lucide-react";
+import { CheckCircle2, Circle, Coins, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -78,7 +78,9 @@ export function MissionsClient({
         <p className="text-sm text-muted-foreground">
           {earned} of {missions.length} claimed today
         </p>
-        <p className="text-sm font-semibold">🪙 {coinBalance} coins</p>
+        <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
+          <Coins className="h-4 w-4 text-amber-500" /> {coinBalance} coins
+        </p>
       </div>
 
       {error && (

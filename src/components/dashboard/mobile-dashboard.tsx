@@ -16,6 +16,8 @@ import { Progress } from "@/components/ui/progress";
 import { QuickSession, ContinueLearningCard } from "@/components/dashboard/quick-session";
 import { WhatsNewCard } from "@/components/dashboard/whats-new-card";
 import { timeAgo } from "@/lib/utils";
+import { pathById } from "@/lib/onboarding";
+import { FeatureIcon } from "@/components/shared/feature-icon";
 import type { DashboardData } from "@/lib/dashboard-data";
 
 export type NetProjectRow = {
@@ -59,6 +61,9 @@ export function MobileDashboardView({
         <StatCard label="Level" icon={<Trophy className="h-4 w-4 text-amber-500" />} value={String(data.level)} />
       </div>
 
+      {/* Start here */}
+      <MobileStartHere data={data} />
+
       {/* Quick session */}
       <QuickSession data={data} />
 
@@ -78,7 +83,7 @@ export function MobileDashboardView({
         <Progress value={goalProgress} className="mt-3 h-2" />
         <p className="mt-2 text-xs text-muted-foreground">
           {goalProgress >= 100 ? (
-            "Goal met — great work! 🎉"
+            "Goal met — great work!"
           ) : (
             <>
               {Math.max(0, data.dailyGoal - Math.round(data.todayMinutes))} more minutes to hit today&apos;s goal.
@@ -209,6 +214,61 @@ function StatCard({ label, icon, value }: { label: string; icon: React.ReactNode
         {label}
       </div>
       <p className="mt-0.5 text-lg font-bold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function MobileStartHere({ data }: { data: DashboardData }) {
+  const path = pathById(data.learningPathId);
+  const next = data.nextStep;
+  const nextHref = next ? `/learn/${next.courseSlug}/${next.moduleSlug}/${next.lessonSlug}` : "/learn";
+  const pathTrack = data.trackProgress.find((t) => t.track === (path?.track ?? "web"));
+  const headline = next
+    ? next.kind === "resume"
+      ? "Continue where you left off"
+      : `Start your ${path?.headline ?? "learning"} path`
+    : "Welcome to your coding journey";
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          <Sparkles className="h-4 w-4 text-primary" /> {headline}
+        </p>
+      </div>
+      {next ? (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">{next.lessonTitle}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Progress value={next.progress} className="h-1.5 flex-1" />
+            <span className="text-[10px] tabular-nums text-muted-foreground">{next.progress}%</span>
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-xs text-muted-foreground">Pick a track, and we&apos;ll always show you exactly what to do next.</p>
+      )}
+      {pathTrack && pathTrack.total > 0 && (
+        <div className="mt-3 flex items-center gap-2">
+          <span
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+            style={{ backgroundColor: `${pathTrack.color}1a`, color: pathTrack.color }}
+          >
+            <FeatureIcon name={pathTrack.icon} className="h-3.5 w-3.5" />
+          </span>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${pathTrack.percent}%` }} />
+          </div>
+          <span className="text-[10px] tabular-nums text-muted-foreground">
+            {pathTrack.completed}/{pathTrack.total}
+          </span>
+        </div>
+      )}
+      <Link
+        href={nextHref}
+        className="mt-3 flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
+      >
+        {next?.kind === "resume" ? "Resume lesson" : "Start learning"} <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </div>
   );
 }

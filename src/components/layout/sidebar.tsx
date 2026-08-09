@@ -15,11 +15,14 @@ import {
   Store,
   Award,
   Medal,
-  User,
   Shield,
   X,
   Sparkles,
   Network,
+  ListChecks,
+  TrendingUp,
+  GraduationCap,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/shared/logo";
@@ -37,22 +40,28 @@ export type ShellUser = {
   avatarUrl?: string | null;
 };
 
-const mainNav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/courses", label: "Courses", icon: BookOpen },
+const primaryNav = [
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/learn", label: "Learn", icon: BookOpen },
+  { href: "/practice", label: "Practice", icon: ListChecks },
+  { href: "/networking", label: "Lab", icon: Network },
+  { href: "/projects", label: "Projects", icon: Rocket },
+  { href: "/progress", label: "Progress", icon: TrendingUp },
+];
+
+const moreNav = [
+  { href: "/courses", label: "Courses", icon: GraduationCap },
   { href: "/study-plan", label: "Study Plan", icon: CalendarClock },
   { href: "/playground", label: "Playground", icon: Terminal },
   { href: "/prompts", label: "Prompt Studio", icon: Sparkles },
   { href: "/worlds", label: "Worlds", icon: Map },
   { href: "/games", label: "Games", icon: Gamepad2 },
-  { href: "/networking", label: "Networking", icon: Network },
   { href: "/missions", label: "Missions", icon: Target },
-  { href: "/projects", label: "Projects", icon: Rocket },
   { href: "/achievements", label: "Achievements", icon: Trophy },
+  { href: "/certificates", label: "Certificates", icon: Award },
   { href: "/store", label: "Store", icon: Store },
   { href: "/leaderboard", label: "Leaderboard", icon: Medal },
-  { href: "/certificates", label: "Certificates", icon: Award },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/whats-new", label: "What's New", icon: Newspaper },
 ];
 
 export function Sidebar({
@@ -97,11 +106,35 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {mainNav.map((item) => {
+          {primaryNav.map((item) => {
             const active =
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
                 : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+
+          <div className="px-3 pt-4 pb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">More</p>
+          </div>
+
+          {moreNav.map((item) => {
+            const active = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

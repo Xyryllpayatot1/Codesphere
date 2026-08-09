@@ -13,6 +13,7 @@
 
 import { formatIp, networkOf, parseIp } from "./ip";
 import { DEVICE_TYPES } from "./devices";
+import { cableStatus } from "./cables";
 import { SERVICE_DEFS, serviceOn } from "./services";
 import { SERVER_SERVICE_KEYS } from "./types";
 import {
@@ -44,6 +45,8 @@ export type CommandResult = {
   /** Structured failure explanation (ping/tracert) for canvas highlighting. */
   fault?: PingFault;
   reason?: string;
+  /** Set by `saveconfig` so the store persists the startup config. */
+  configSaved?: boolean;
 };
 
 const label = (d: Device) => d.config.hostname || d.config.name || DEVICE_TYPES[d.type].label;
@@ -289,14 +292,35 @@ function showCommand(snap: NetSnapshot, device: Device, sub: string): CommandRes
   const lines: CmdLine[] = [];
   switch (sub) {
     case "interfaces": {
-      lines.push(out("Interface              Status     IP Address       Subnet Mask       Description"));
+      lines.push(out("Interface              Status     Link       IP Address       Subnet Mask       Description"));
       for (const i of device.config.interfaces) {
         lines.push(
           out(
-            `${(i.label ?? i.id).padEnd(22)} ${i.status.padEnd(11)} ${(i.ip ?? "unassigned").padEnd(16)} ${(i.mask ?? "–").padEnd(16)} ${i.description ?? ""}`
+            `${(i.label ?? i.id).padEnd(22)} ${i.status.padEnd(11)} ${linkState(snap, device, i).padEnd(10)} ${(i.ip ?? "unassigned").padEnd(16)} ${(i.mask ?? "–").padEnd(16)} ${i.description ?? ""}`
           )
         );
       }
+      break;
+    }
+    case "running-config": {
+      lines.push(out("-- Running configuration --", { status: "ok" }));
+      lines.push(...configLines(device));
+      break;
+    }
+    case "startup-config": {
+      const saved = snap.startupConfigs?.[device.id];
+      if (!saved) {
+        lines.push(out("Startup configuration not found. Use SAVECONFIG to save the running configuration.", { status: "warn" }));
+        break;
+      }
+      lines.push(out("-- Startup configuration --", { status: "ok" }));
+      lines.push(
+        ...configLines({
+          ...device,
+          config: { ...device.config, hostname: saved.hostname, interfaces: saved.interfaces },
+          routes: saved.routes,
+        })
+      );
       break;
     }
     case "ip": {
@@ -341,9 +365,78 @@ function showCommand(snap: NetSnapshot, device: Device, sub: string): CommandRes
       break;
     }
     default:
-      lines.push(out("Available: show interfaces · show ip · show routes · show version · show services"));
+      lines.push(out("Available: show interfaces · show ip · show routes · show version · show services · show running-config · show startup-config"));
   }
   return { lines, ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Running vs startup configuration.
+// ---------------------------------------------------------------------------
+
+/** A neutral, human-readable rendering of a device's config (hostname, DHCP,
+ * every interface with IP/mask/status, and the routing table). Shared by
+ * `show running-config` and `show startup-config`. */
+function configLines(device: Device): CmdLine[] {
+  const lines: CmdLine[] = [];
+  lines.push(out(`hostname ${device.config.hostname}`));
+  lines.push(out(`ip dhcp ${device.config.dhcp ? "enabled" : "disabled"}`));
+  for (const i of device.config.interfaces) {
+    const parts = [`interface ${i.label ?? i.id}`, `  status ${i.status}`];
+    if (i.ip) parts.push(`  ip ${i.ip} / ${i.mask ?? "255.255.255.0"}`);
+    if (i.description) parts.push(`  description ${i.description}`);
+    lines.push(out(parts.join("  ")));
+  }
+  for (const r of device.routes) {
+    lines.push(out(`ip route ${r.network} / ${r.mask}  ->  ${r.nextHop}`));
+  }
+  if (device.routes.length === 0) lines.push(out("ip route (none)"));
+  return lines;
+}
+
+/** The operational link state of an interface: what the attached cable (if
+ * any) currently carries. Admin state is `status`; link state is this. */
+function linkState(snap: NetSnapshot, device: Device, iface: Device["config"]["interfaces"][number]): string {
+  const c = snap.cables.find((x) => (x.fromDevice === device.id && x.fromPort === iface.id) || (x.toDevice === device.id && x.toPort === iface.id));
+  if (!c) return "no-cable";
+  const st = cableStatus(c, snap.devices);
+  if (st === "error") return "error";
+  if (st === "down") return "down";
+  return "up";
+}
+
+/** `saveconfig` — the store persists the running config as the startup config. */
+function saveConfigCommand(device: Device): CommandResult {
+  return {
+    lines: [
+      out("Saving the running configuration as the startup configuration…", { delay: 200 }),
+      out(`${device.config.hostname}: startup configuration saved.`, { status: "ok" }),
+    ],
+    ok: true,
+    configSaved: true,
+  };
+}
+
+/** `reload` — restore the device from its saved startup configuration. */
+function reloadCommand(snap: NetSnapshot, device: Device): CommandResult {
+  const saved = snap.startupConfigs?.[device.id];
+  const lines: CmdLine[] = [out(`Restarting ${label(device)}…`, { delay: 200 })];
+  if (!saved) {
+    lines.push(out("No startup configuration saved for this device — the running configuration is kept.", { status: "warn" }));
+    return { lines, ok: true };
+  }
+  lines.push(out("Loading startup configuration…", { delay: 250 }));
+  const restored: Device = {
+    ...device,
+    config: {
+      ...device.config,
+      hostname: saved.hostname,
+      interfaces: JSON.parse(JSON.stringify(saved.interfaces)) as Device["config"]["interfaces"],
+    },
+    routes: JSON.parse(JSON.stringify(saved.routes)) as Device["routes"],
+  };
+  lines.push(out(`${saved.hostname} reloaded (${saved.interfaces.length} interfaces, ${saved.routes.length} routes).`, { status: "ok" }));
+  return { lines, ok: true, device: restored };
 }
 
 // ---------------------------------------------------------------------------
@@ -389,6 +482,13 @@ export function runCommand(snap: NetSnapshot, deviceId: string, input: string): 
     case "show":
       return showCommand(snap, device, tokens[1]?.toLowerCase() ?? "");
 
+    case "saveconfig":
+    case "save":
+      return saveConfigCommand(device);
+
+    case "reload":
+      return reloadCommand(snap, device);
+
     case "help":
     case "?":
       return { lines: helpLines(), ok: true };
@@ -416,7 +516,9 @@ function helpLines(): CmdLine[] {
     out("IPCONFIG           Displays the IP configuration (use /all for details, /renew to request DHCP)"),
     out("NSLOOKUP           Asks the DNS server for the address of a hostname"),
     out("PING               Sends ICMP echo requests to a host or IP"),
-    out("SHOW               Show interfaces / ip / routes / services / version"),
+    out("RELOAD             Reboots the device, loading its saved startup configuration"),
+    out("SAVECONFIG         Saves the running configuration as the startup configuration"),
+    out("SHOW               Show interfaces / ip / routes / services / version / running-config / startup-config"),
     out("TRACERT            Traces the route a packet takes to a host or IP"),
     out("VER                Displays the simulator version"),
     out(""),
@@ -453,6 +555,10 @@ export function cmdSuggestions(snap: NetSnapshot, deviceId: string, input: strin
     { cmd: "show ip", explain: "Show the device's IP settings." },
     { cmd: "show routes", explain: "Show the routing table (connected + static routes)." },
     { cmd: "show version", explain: "Show device + simulator info." },
+    { cmd: "show running-config", explain: "Show the live (running) configuration of this device." },
+    { cmd: "show startup-config", explain: "Show the saved startup configuration of this device." },
+    { cmd: "saveconfig", explain: "Save the running configuration as the startup configuration." },
+    { cmd: "reload", explain: "Reboot the device and restore its saved startup configuration." },
     { cmd: "help", explain: "List available commands." },
     { cmd: "cls", explain: "Clear the screen." },
     { cmd: "exit", explain: "Close the command prompt." },

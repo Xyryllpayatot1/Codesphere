@@ -2,13 +2,15 @@
 import { formatIp, intToIp, ipToInt, isSameNetwork, maskToBits, networkOf, parseIp } from "./ip";
 import { cableStatus } from "./cables";
 import { serviceOn } from "./services";
-import type { Cable, Device, PacketType, PingFault, TraceResult, TraceStep, WirelessLink } from "./types";
+import type { Cable, Device, PacketType, PingFault, SimSnapshot, TraceResult, TraceStep, WirelessLink } from "./types";
 
 export type NetSnapshot = {
   devices: Device[];
   cables: Cable[];
   macTables: Record<string, Record<string, string>>;
   wirelessLinks: WirelessLink[];
+  /** routerId -> saved startup config — surfaced by `show startup-config` / `reload`. */
+  startupConfigs?: SimSnapshot["startupConfigs"];
 };
 
 export type PacketRun = {
@@ -296,19 +298,26 @@ function connectedInterface(router: Device, ip: string): string | null {
   return null;
 }
 
-/** Next-hop IP for a static route, or null. Returns "0.0.0.0" for default route. */
+/**
+ * Next-hop IP for a static route, or null. Returns "0.0.0.0" for a default
+ * route. Matches the MOST SPECIFIC (longest-prefix) route like a real router:
+ * a /24 toward the destination always beats an overlapping /16 or the
+ * default /0, regardless of the order the routes were entered in.
+ */
 function staticRouteNextHop(router: Device, ip: string): string | null {
   const tp = parseIp(ip);
   if (!tp) return null;
+  let best: { bits: number; nextHop: string } | null = null;
   for (const r of router.routes) {
     const net = parseIp(r.network);
     if (!net) continue;
+    const bits = maskToBits(r.mask);
     const masked = networkOf(tp, r.mask);
-    if (masked.a === net.a && masked.b === net.b && masked.c === net.c && masked.d === net.d) {
-      return r.nextHop === "0.0.0.0" ? "0.0.0.0" : r.nextHop;
-    }
+    if (masked.a !== net.a || masked.b !== net.b || masked.c !== net.c || masked.d !== net.d) continue;
+    if (!best || bits > best.bits) best = { bits, nextHop: r.nextHop };
   }
-  return null;
+  if (!best) return null;
+  return best.nextHop === "0.0.0.0" ? "0.0.0.0" : best.nextHop;
 }
 
 function defaultGateway(router: Device): string | null {
@@ -670,6 +679,7 @@ export function runPacket(snap: NetSnapshot, run: PacketRun): TraceResult {
       steps.push(step(startDev.id, "L1", "No path", `No cable path from ${label(startDev)} (port ${leg.startPortId}) to ${label(devices.find((x) => x.id === leg.endDeviceId)!)} (${leg.endPortId}).`, "fail"));
       return failure(steps, "Request timed out.", PING_FAULTS.noPath(startDev.id));
     }
+    const learnedMacs = new Set<string>();
     for (let i = 1; i < route.path.length; i++) {
       const p = route.path[i];
       const viaCable = route.viaCableIds[i];
@@ -678,6 +688,12 @@ export function runPacket(snap: NetSnapshot, run: PacketRun): TraceResult {
         steps.push(step(p.deviceId, "L1", "Frame on cable", `The frame travels the cable to ${label(pDevice)}.`, undefined, viaCable));
       }
       if (isBridge(pDevice)) {
+        // Real MAC learning: the switch records the sender's MAC on the port
+        // the frame arrived on, so the next frame goes to one port, not all.
+        if (!learnedMacs.has(pDevice.id)) {
+          learnedMacs.add(pDevice.id);
+          (snap.macTables[pDevice.id] ??= {})[startDev.config.mac] = p.portId;
+        }
         const known = Boolean(snap.macTables[pDevice.id]?.[target.config.mac]);
         steps.push(step(pDevice.id, "L2", "MAC lookup", known ? `${label(pDevice)} knows the destination MAC and forwards only to the right port.` : `${label(pDevice)} doesn't know the destination MAC — it floods the frame to every port.`, known ? "ok" : "warn"));
       } else if (i === route.path.length - 1) {

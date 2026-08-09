@@ -4,7 +4,7 @@
 // players. Mirrors the shapes returned by the game APIs and the server pages.
 
 import { useState } from "react";
-import { Award, CheckCircle2, Coins, Skull, Sparkles, Trophy, XCircle } from "lucide-react";
+import { Award, CheckCircle2, Coins, Map, Skull, Sparkles, Trophy, XCircle } from "lucide-react";
 import { toast } from "@/store/use-toast";
 import { GAME_LEVEL_STATUS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -170,14 +170,15 @@ export function GameResultPanel({ result, levelExplanation }: { result: GameSubm
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/85">
             <span className="inline-flex items-center gap-1"><Coins className="h-3.5 w-3.5 text-warning" />+{result.boss.xpAwarded} XP</span>
-            <span className="inline-flex items-center gap-1">🪙 +{result.boss.coinsAwarded} coins</span>
+            <span className="inline-flex items-center gap-1"><Coins className="h-3.5 w-3.5 text-warning" />+{result.boss.coinsAwarded} coins</span>
             {result.boss.certificate && (
               <span className="inline-flex items-center gap-1"><Award className="h-3.5 w-3.5 text-primary" />Certificate {result.boss.certificate.code}</span>
             )}
           </div>
           {result.boss.unlockedWorlds.length > 0 && (
             <p className="text-xs font-medium text-success">
-              🗺️ New world{result.boss.unlockedWorlds.length > 1 ? "s" : ""} unlocked: {result.boss.unlockedWorlds.join(", ")}!
+              <Map className="mr-1 inline h-3.5 w-3.5" />
+              New world{result.boss.unlockedWorlds.length > 1 ? "s" : ""} unlocked: {result.boss.unlockedWorlds.join(", ")}!
             </p>
           )}
         </div>
@@ -203,7 +204,7 @@ export function useGameSubmit(gameSlug: string, levelKey: string) {
       setResult(data);
       if (data.passed) {
         const coinText = data.coinsAwarded
-          ? ` · +${data.coinsAwarded} 🪙${data.levelUpCoins ? ` (${data.levelUpCoins} level-up)` : ""}`
+          ? ` · +${data.coinsAwarded} coins${data.levelUpCoins ? ` (${data.levelUpCoins} level-up)` : ""}`
           : "";
         toast({ title: data.perfect ? "Perfect!" : "Level passed!", description: `+${data.xpAwarded} XP${coinText}`, variant: "success" });
         if (data.levelUp) {

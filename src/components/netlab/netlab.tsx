@@ -17,6 +17,8 @@ import { CmdLog } from "./cmd-log";
 import { TopologyDialog, ProjectsDialog } from "./projects-dialog";
 import { CollabDialog } from "./collab-dialog";
 import { CollabPanel } from "./collab-panel";
+import { LabLevelSelect } from "./lab-level-select";
+import type { LabLevel } from "./lab-levels";
 
 export type NetLabInitial = {
   template?: "empty" | "small-lan" | "two-router" | "wifi" | "internet";
@@ -27,13 +29,21 @@ export function NetLab({ initial, roomCode }: { initial?: NetLabInitial; roomCod
   const [showTopologies, setShowTopologies] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [collabOpen, setCollabOpen] = useState(false);
+  const [level, setLevel] = useState<LabLevel>("beginner");
   const checkMission = useNetlab((s) => s.checkMission);
   const missionSlug = useNetlab((s) => s.missionSlug);
   const mode = useNetlab((s) => s.mode);
+  const setMode = useNetlab((s) => s.setMode);
   const version = useNetlab((s) => s.version);
   const simDeviceCount = useNetlab((s) => s.sim.devices.length);
   const setMissionPickerOpen = useNetlab((s) => s.setMissionPickerOpen);
   const seeded = useRef(false);
+
+  const changeLevel = (next: LabLevel) => {
+    setLevel(next);
+    if (next === "sandbox" && mode !== "sandbox") setMode("sandbox");
+    else if (next !== "sandbox" && mode === "sandbox") setMode("mission");
+  };
 
   useEffect(() => {
     if (seeded.current) return;
@@ -62,12 +72,18 @@ export function NetLab({ initial, roomCode }: { initial?: NetLabInitial; roomCod
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1">
         <div className="hidden lg:block">
-          <Palette />
+          <Palette level={level} />
         </div>
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="relative min-h-0 flex-1">
             <div className="hidden lg:block">
               <Toolbar onOpenTopologies={() => setShowTopologies(true)} onOpenProjects={() => setShowProjects(true)} />
+            </div>
+            <div className="absolute left-3 top-3 z-30 hidden md:block">
+              <LabLevelSelect level={level} onChange={changeLevel} />
+            </div>
+            <div className="absolute left-3 top-14 z-30 md:hidden">
+              <LabLevelSelect level={level} onChange={changeLevel} />
             </div>
             <Canvas />
             <MissionPanel />
@@ -95,7 +111,7 @@ export function NetLab({ initial, roomCode }: { initial?: NetLabInitial; roomCod
         </div>
       </div>
       <DeviceConfigWindow />
-      <MissionPicker />
+      <MissionPicker level={level} />
       <TopologyDialog open={showTopologies} onOpenChange={setShowTopologies} />
       <ProjectsDialog open={showProjects} onOpenChange={setShowProjects} />
       <CollabDialog open={collabOpen} onOpenChange={setCollabOpen} />

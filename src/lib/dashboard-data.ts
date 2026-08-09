@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { levelFromXp, levelTitle } from "@/lib/engine/xp";
 import { todayKey, fromDateKey } from "@/lib/utils";
 import { isReleaseSeen } from "@/lib/services/releases";
+import { pathById } from "@/lib/onboarding";
+import { TRACKS, trackForCourse } from "@/lib/tracks";
 import type { LatestReleaseView } from "@/components/dashboard/whats-new-card";
 
 export type DashboardData = {
@@ -22,6 +24,30 @@ export type DashboardData = {
   activities: ActivityRow[];
   chart: { day: string; minutes: number }[];
   latestRelease: LatestReleaseView | null;
+  learningPathId: string | null;
+  trackProgress: TrackProgressRow[];
+  nextStep: NextStep | null;
+};
+
+export type TrackProgressRow = {
+  track: string;
+  label: string;
+  icon: string;
+  color: string;
+  total: number;
+  completed: number;
+  percent: number;
+};
+
+export type NextStep = {
+  kind: "resume" | "start";
+  courseSlug: string;
+  moduleSlug: string;
+  lessonSlug: string;
+  courseTitle: string;
+  lessonTitle: string;
+  progress: number;
+  meta: string;
 };
 
 export type PlanRow = {
@@ -75,7 +101,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
 
   const lessonIds = [...new Set(planItems.map((p) => p.lessonId))];
 
-  const [user, settings, stats, activities, sessions, continueItems, lessons] = await Promise.all([
+  const [user, settings, stats, activities, sessions, continueItems, lessons, publishedCourses] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, xp: true, streak: true, longestStreak: true } }),
     prisma.userSetting.findUnique({ where: { userId } }),
     Promise.all([
@@ -131,7 +157,83 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
           },
         })
       : [],
+    prisma.course.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: [{ order: "asc" }, { title: "asc" }],
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        language: true,
+        category: { select: { slug: true } },
+        enrollments: { where: { userId }, select: { status: true } },
+      },
+    }),
   ]);
+
+  // ── learning path + track progress + next step ──
+  const learningPathId = settings?.learningPath ?? null;
+  const userTrack = (learningPathId ? pathById(learningPathId)?.track : null) ?? "web";
+
+  const trackProgress: TrackProgressRow[] = TRACKS.map((t) => {
+    const courses = publishedCourses.filter((c) => trackForCourse(c) === t.id);
+    const completed = courses.filter((c) => c.enrollments[0]?.status === "COMPLETED").length;
+    return {
+      track: t.id,
+      label: t.label,
+      icon: t.icon,
+      color: t.color,
+      total: courses.length,
+      completed,
+      percent: courses.length ? Math.round((completed / courses.length) * 100) : 0,
+    };
+  });
+
+  let nextStep: NextStep | null = null;
+  if (continueItems[0]) {
+    const first = continueItems[0];
+    nextStep = {
+      kind: "resume",
+      courseSlug: first.lesson.course?.slug ?? "",
+      moduleSlug: first.lesson.module.slug,
+      lessonSlug: first.lesson.slug,
+      courseTitle: first.lesson.course?.title ?? "Course",
+      lessonTitle: first.lesson.title,
+      progress: first.progressPercent,
+      meta: `Resume ${first.lesson.course?.title ?? "course"}`,
+    };
+  } else {
+    const trackCourses = publishedCourses.filter((c) => trackForCourse(c) === userTrack);
+    const target =
+      trackCourses.find((c) => c.enrollments.length === 0) ??
+      trackCourses.find((c) => c.enrollments[0]?.status !== "COMPLETED") ??
+      trackCourses[0];
+    if (target) {
+      const firstLesson = await prisma.lesson.findFirst({
+        where: { courseId: target.id },
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          estimatedMinutes: true,
+          module: { select: { slug: true } },
+        },
+      });
+      if (firstLesson) {
+        nextStep = {
+          kind: "start",
+          courseSlug: target.slug,
+          moduleSlug: firstLesson.module.slug,
+          lessonSlug: firstLesson.slug,
+          courseTitle: target.title,
+          lessonTitle: firstLesson.title,
+          progress: 0,
+          meta: `${target.title} · ${firstLesson.estimatedMinutes} min`,
+        };
+      }
+    }
+  }
 
   const latestReleaseRow = await prisma.release.findFirst({
     where: { isPublished: true },
@@ -218,6 +320,9 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     })),
     chart: buildChart(sessions),
     latestRelease,
+    learningPathId,
+    trackProgress,
+    nextStep,
   };
 }
 

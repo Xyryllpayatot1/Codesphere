@@ -776,6 +776,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
       }
 
       const result = runCommand(sim.netSnapshot(), deviceId, trimmed);
+      if (result.configSaved) sim.saveStartupConfig(deviceId);
       if (result.device) sim.applyDevice(result.device);
 
       const dev = sim.devices.find((d) => d.id === deviceId);

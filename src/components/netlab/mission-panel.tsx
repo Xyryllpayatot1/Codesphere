@@ -122,9 +122,18 @@ export function MissionPanel() {
                 {missionCheck.ok ? "All objectives met!" : "Not solved yet"}
               </p>
               {!missionCheck.ok && missionCheck.hints.length > 0 && (
+                <p className="mt-1.5 flex items-start gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] leading-snug text-muted-foreground">
+                  <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                  <span>
+                    <span className="font-semibold text-foreground">Your next step: </span>
+                    {missionCheck.hints[0]}
+                  </span>
+                </p>
+              )}
+              {!missionCheck.ok && missionCheck.hints.length === 0 && (
                 <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-muted-foreground">
                   <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                  {missionCheck.hints[0]}
+                  Press Check below for a hint when you&apos;re stuck.
                 </p>
               )}
             </div>

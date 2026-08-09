@@ -55,6 +55,10 @@ export function CableSheet({ open, onOpenChange }: { open: boolean; onOpenChange
                 {active && <Check className="h-4 w-4 shrink-0 text-primary" />}
               </div>
               <p className="mt-1.5 pl-5 text-xs leading-snug text-muted-foreground">{def.purpose}</p>
+              <p className="mt-1 pl-5 text-[11px] leading-snug text-muted-foreground/70">
+                <span className="font-semibold text-muted-foreground">Why it works: </span>
+                {c.why}
+              </p>
             </button>
           );
         })}

@@ -1,0 +1,66 @@
+﻿src\app\(app)\worlds\[slug]\page.tsx :: 82 :: <li key={i} className={cn(r.met ? "text-success" : "")}>{r.met ? "✓" : "•"} {r.label}{r.de...
+src\app\(app)\layout.tsx :: 5 :: // © 2026 CodeSphere
+src\app\(marketing)\about\page.tsx :: 5 :: // © 2026 CodeSphere
+src\app\(marketing)\credits\page.tsx :: 5 :: // © 2026 CodeSphere
+src\app\(marketing)\credits\page.tsx :: 123 :: © {new Date().getFullYear()} {BRAND_NAME}
+src\app\(marketing)\layout.tsx :: 5 :: // © 2026 CodeSphere
+src\app\layout.tsx :: 5 :: // © 2026 CodeSphere
+src\components\games\game-card.tsx :: 80 :: <span className="inline-flex items-center gap-1"><Medal className="h-3.5 w-3.5" />{game.xp...
+src\components\games\shared.tsx :: 124 :: <span className={f.startsWith("✓") ? "text-success" : ""}>{f.startsWith("✓") || f.startsWi...
+src\components\layout\app-shell.tsx :: 7 :: // © 2026 CodeSphere
+src\components\layout\footer.tsx :: 5 :: // © 2026 CodeSphere
+src\components\layout\footer.tsx :: 63 :: © {COPYRIGHT_YEAR} {BRAND_NAME} — {CREATOR_NAME}
+src\components\learning\blocks\exercise-block.tsx :: 325 :: <span className={f.startsWith("✓") ? "text-success" : ""}>{f.startsWith("✓") || f.startsWi...
+src\components\learning\blocks\index.tsx :: 107 :: <span className="text-primary">✓</span>
+src\components\learning\blocks\section-block.tsx :: 11 :: {phase?.icon ?? "✦"}
+src\components\marketing\about\about-content.tsx :: 5 :: // © 2026 CodeSphere
+src\components\netlab\animations.ts :: 143 :: pulse(s.deviceId, OK, 380, trace.ok ? "✓" : "");
+src\components\prompts\prompt-analyzer.tsx :: 128 :: <span className="text-success">✓</span>
+src\components\shared\logo.tsx :: 5 :: // © 2026 CodeSphere
+src\lib\content\modes.ts :: 24 :: icon: "📖",
+src\lib\content\modes.ts :: 30 :: icon: "🎬",
+src\lib\content\modes.ts :: 36 :: icon: "🎮",
+src\lib\content\modes.ts :: 42 :: icon: "✍️",
+src\lib\content\types.ts :: 118 :: { step: 1, title: "Introduction", icon: "👋" },
+src\lib\content\types.ts :: 119 :: { step: 2, title: "Real-Life Analogy", icon: "🌍" },
+src\lib\content\types.ts :: 120 :: { step: 3, title: "Why It Matters", icon: "💡" },
+src\lib\content\types.ts :: 121 :: { step: 4, title: "Visual Explanation", icon: "🔍" },
+src\lib\content\types.ts :: 122 :: { step: 5, title: "Step-by-Step", icon: "🧭" },
+src\lib\content\types.ts :: 123 :: { step: 6, title: "Interactive Demonstration", icon: "🎮" },
+src\lib\content\types.ts :: 124 :: { step: 7, title: "Guided Practice", icon: "🤝" },
+src\lib\content\types.ts :: 125 :: { step: 8, title: "Explain Every Mistake", icon: "⚠️" },
+src\lib\content\types.ts :: 126 :: { step: 9, title: "Challenge", icon: "🏆" },
+src\lib\content\types.ts :: 127 :: { step: 10, title: "Reflection", icon: "🪞" },
+src\lib\engine\validation\index.ts :: 138 :: ? `✓ ${desc}`
+src\lib\engine\validation\index.ts :: 139 :: : `✗ ${desc} — got ${r.got}`;
+src\lib\engine\validation\index.ts :: 207 :: feedback.push(`✓ Blank ${i + 1} correct.`);
+src\lib\engine\validation\index.ts :: 209 :: feedback.push(`✗ Blank ${i + 1} is not quite right.`);
+src\lib\engine\levels.ts :: 18 :: missions: { title: "Daily Missions", description: "Complete daily missions for CodeCoins a...
+src\lib\engine\levels.ts :: 19 :: leaderboards: { title: "Leaderboards", description: "Compete on daily, weekly and monthly ...
+src\lib\engine\levels.ts :: 20 :: store: { title: "CodeCoin Store", description: "Spend CodeCoins on profile frames, themes ...
+src\lib\engine\levels.ts :: 21 :: store_rare: { title: "Rare Store Tier", description: "Rare cosmetics become purchasable.",...
+src\lib\engine\levels.ts :: 22 :: store_epic: { title: "Epic Store Tier", description: "Epic cosmetics become purchasable.",...
+src\lib\engine\levels.ts :: 23 :: store_legendary: { title: "Legendary Store Tier", description: "Legendary cosmetics become...
+src\lib\engine\levels.ts :: 24 :: store_mythic: { title: "Mythic Store Tier", description: "Mythic cosmetics become purchasa...
+src\lib\engine\levels.ts :: 25 :: max_level: { title: "Level Cap", description: "Reach the top of the mountain. You are the ...
+src\lib\games\grade.ts :: 75 :: .map((key, i) => (key === cfg.answer[i] ? `✓ Step ${i + 1} correct.` : `✗ Step ${i + 1} sh...
+src\lib\games\grade.ts :: 99 :: if (rightPicks > 0) feedback.push(`✓ ${rightPicks} correct declaration${rightPicks === 1 ?...
+src\lib\games\grade.ts :: 100 :: if (wrongPicks > 0) feedback.push(`✗ ${wrongPicks} declaration${wrongPicks === 1 ? "" : "s...
+src\lib\games\grade.ts :: 166 :: feedback.push(`✓ ${q.prompt} — correct.`);
+src\lib\games\grade.ts :: 168 :: feedback.push(`✗ ${q.prompt} — ${q.explanation}`);
+src\lib\media\storage.ts :: 3 :: * Copyright © 2026 Jhon Xyryll Samoy
+src\lib\services\releases.ts :: 3 :: * Copyright © 2026 Jhon Xyryll Samoy
+src\lib\auth.ts :: 3 :: * Copyright © 2026 Jhon Xyryll Samoy
+src\lib\brand.ts :: 5 :: // © 2026 CodeSphere
+src\lib\constants.ts :: 5 :: // © 2026 CodeSphere
+src\lib\constants.ts :: 309 :: profile_frame: { label: "Profile Frames", icon: "🖼️" },
+src\lib\constants.ts :: 310 :: avatar: { label: "Avatars", icon: "🧑‍🚀" },
+src\lib\constants.ts :: 311 :: username_color: { label: "Username Colors", icon: "🎨" },
+src\lib\constants.ts :: 312 :: theme: { label: "Dashboard Themes", icon: "🌙" },
+src\lib\constants.ts :: 313 :: cursor_effect: { label: "Cursor Effects", icon: "✨" },
+src\lib\constants.ts :: 314 :: wallpaper: { label: "Wallpapers", icon: "🏞️" },
+src\lib\constants.ts :: 315 :: certificate_border: { label: "Certificate Borders", icon: "📜" },
+src\lib\constants.ts :: 316 :: title_card: { label: "Title Cards", icon: "🪪" },
+src\lib\constants.ts :: 317 :: achievement_effect: { label: "Achievement Effects", icon: "🎉" },
+src\lib\jwt.ts :: 3 :: * Copyright © 2026 Jhon Xyryll Samoy
+src\lib\prisma.ts :: 3 :: * Copyright © 2026 Jhon Xyryll Samoy

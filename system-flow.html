@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeSphere — Buong System Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #6366f1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+  header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.875rem; }
+  .brand { display: flex; align-items: center; gap: 0.75rem; }
+  .logo {
+    width: 2.4rem; height: 2.4rem; border-radius: 0.7rem;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 1rem;
+  }
+  button.toggle {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    padding: 0.5rem 0.9rem; border-radius: 0.6rem; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  }
+  button.toggle:hover { border-color: var(--accent); }
+  .panel {
+    margin-top: 1.5rem; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 1rem; padding: 1.25rem; overflow-x: auto;
+  }
+  .mermaid { display: flex; justify-content: center; min-width: 720px; }
+  footer {
+    margin-top: 1.5rem; color: var(--muted); font-size: 0.8rem; line-height: 1.6;
+    display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem;
+  }
+  footer .dot { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 9999px; margin-right: 0.35rem; vertical-align: middle; }
+  code { background: rgba(148,163,184,0.15); padding: 0.1rem 0.35rem; border-radius: 0.3rem; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">CS</div>
+      <div>
+        <h1>CodeSphere — Buong System Flow</h1>
+        <p>End-to-end na daloy ng buong platform: auth, learning, gamification, worlds, networking, rooms, projects, store, update notes, at admin.</p>
+      </div>
+    </div>
+    <button class="toggle" id="themeToggle" type="button">Toggle theme</button>
+  </header>
+
+  <div class="panel">
+    <div class="mermaid" id="diagram"></div>
+    <pre id="graph" style="display:none">flowchart TB
+    %% ── 1 · Auth ──────────────────────────────────────────────
+    subgraph AUTH["1 · Auth & Onboarding"]
+        A1["Register / Login"] --> A2["Session cookie"]
+        A2 --> A3{"Role?"}
+        A3 -- "STUDENT / INSTRUCTOR" --> A4["Dashboard /dashboard"]
+        A3 -- "ADMIN" --> A5["Admin panel /admin"]
+    end
+
+    %% ── Navigation ────────────────────────────────────────────
+    subgraph NAV["Navigation — sidebar + mobile nav"]
+        S1["Learn"]
+        S2["Study plan"]
+        S3["Worlds & games"]
+        S4["Networking"]
+        S5["Rooms"]
+        S6["Projects"]
+        S7["Store"]
+        S8["Certificates"]
+        S9["What's New"]
+        S10["Leaderboard"]
+        S11["Profile"]
+        S12["Playground"]
+    end
+
+    A4 --> NAV
+
+    %% ── 2 · Learning ──────────────────────────────────────────
+    subgraph LEARN["2 · Learning Core"]
+        L1["/courses"] --> L2["/courses/slug"]
+        L2 --> L3["Modules"]
+        L3 --> L4["Lesson /learn/…"]
+        L4 --> L5["Content + exercises + quizzes"]
+        L5 --> L6["LessonProgress %"]
+        L6 --> L7["Complete → XP + activity"]
+    end
+
+    %% ── 3 · Study plan ────────────────────────────────────────
+    subgraph PLAN["3 · Study Plan & Missions"]
+        P1["/study-plan"] --> P2["Daily recommendations"]
+        P2 --> P3["Daily missions & streak"]
+        P3 --> P4["Today's plan sa dashboard"]
+    end
+
+    %% ── 4 · Gamification ──────────────────────────────────────
+    subgraph GAM["4 · Gamification"]
+        G1["Every action"] --> G2["XP + coins (transactions)"]
+        G2 --> G3["Levels & titles"]
+        G3 --> G4["Leaderboard"]
+        G3 --> G5["Activity feed"]
+    end
+
+    %% ── 5 · Worlds & games ────────────────────────────────────
+    subgraph WORLD["5 · Worlds & Games"]
+        W1["/worlds"] --> W2["Unlock criteria"]
+        W2 --> W3["Games + boss battles"]
+        W3 --> W4["Mastery events"]
+        W4 --> W5["World certificate + rewards"]
+    end
+
+    %% ── 6 · Networking ────────────────────────────────────────
+    subgraph NET["6 · Networking Lab"]
+        N1["/networking missions"] --> N2["NetLab canvas"]
+        N2 --> N3["Devices + cables snapshot"]
+        N3 --> N4["Auto-save → NetworkProject"]
+    end
+
+    %% ── 7 · Rooms ─────────────────────────────────────────────
+    subgraph ROOM["7 · Collab Rooms"]
+        R1["/room/CODE"] --> R2["Join by code"]
+        R2 --> R3["Real-time events stream"]
+        R3 --> R4["Shared panel + dialog"]
+    end
+
+    %% ── 8 · Projects ──────────────────────────────────────────
+    subgraph PROJ["8 · Projects"]
+        J1["/projects"] --> J2["Submit solution"]
+        J2 --> J3{"Admin review"}
+        J3 -- "APPROVED" --> J4["Dashboard stats"]
+        J3 -- "REJECTED" --> J5["Fix & resubmit"]
+    end
+
+    %% ── 9 · Store & certs ─────────────────────────────────────
+    subgraph SHOP["9 · Store & Certificates"]
+        M1["/store"] --> M2["Buy cosmetics with coins"]
+        M2 --> M3["Profile avatar / perks"]
+        C1["/certificates"] --> C2["Generated certificates"]
+    end
+
+    %% ── 10 · What's New ───────────────────────────────────────
+    subgraph NOTES["10 · What's New"]
+        H1["Admin: create release"] --> H2["Publish"]
+        H2 --> H3["Dashboard card + New badge"]
+        H3 --> H4["/whats-new list"]
+        H4 --> H5["Detail page + seen tracking"]
+    end
+
+    %% ── 11 · Admin ────────────────────────────────────────────
+    subgraph ADMIN["11 · Admin Panel"]
+        AD1["Platform counts"]
+        AD2["Project reviews"]
+        AD3["Worlds manager"]
+        AD4["Update notes"]
+        AD5["Recent users"]
+    end
+
+    A5 --> ADMIN
+
+    S1 --> LEARN
+    S2 --> PLAN
+    S3 --> WORLD
+    S4 --> NET
+    S5 --> ROOM
+    S6 --> PROJ
+    S7 --> SHOP
+    S8 --> SHOP
+    S9 --> NOTES
+    S10 --> GAM
+    S11 --> GAM
+    S12 --> LEARN
+
+    %% ── Cross-links ───────────────────────────────────────────
+    LEARN --> GAM
+    PLAN --> GAM
+    WORLD --> GAM
+    NET --> PROJ
+
+    %% ── Data layer ────────────────────────────────────────────
+    subgraph DATA["Data layer — Postgres via Prisma (Supabase)"]
+        D1["User · Role · XP · Coins"]
+        D2["Course · Module · Lesson · Exercise · Quiz"]
+        D3["Progress · Study session · Activity · Plan"]
+        D4["World · Game · Mastery"]
+        D5["NetworkProject · Room"]
+        D6["Release · Media · Views"]
+        D7["Store · Purchase · Certificate"]
+    end
+
+    LEARN --> DATA
+    PLAN --> DATA
+    WORLD --> DATA
+    NET --> DATA
+    ROOM --> DATA
+    PROJ --> DATA
+    SHOP --> DATA
+    NOTES --> DATA
+    ADMIN --> DATA
+
+    classDef brand fill:#6366f1,stroke:#4f46e5,color:#fff,font-weight:700
+    classDef plain fill:#1e293b,stroke:#475569,color:#e2e8f0
+    class A4,A5 brand
+    class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10,S11,S12 plain
+</pre>
+  </div>
+
+  <footer>
+    <span><span class="dot" style="background:#6366f1"></span>Pangunahing daloy (auth → dashboard → modules)</span>
+    <span><span class="dot" style="background:#8b5cf6"></span>Gamification loop (bawat aksyon → XP/coins)</span>
+    <span>Built with <code>Mermaid</code> · open <code>system-flow.html</code> in any browser</span>
+  </footer>
+</div>
+
+<script>
+  const DARK = {
+    theme: "base",
+    themeVariables: {
+      fontFamily: "Inter, system-ui, sans-serif",
+      fontSize: "13px",
+      background: "#0f172a",
+      mainBkg: "#1e293b",
+      nodeBorder: "#475569",
+      clusterBkg: "#16203a",
+      clusterBorder: "#334155",
+      titleColor: "#e2e8f0",
+      textColor: "#e2e8f0",
+      edgeLabelBackground: "#1e293b",
+      lineColor: "#94a3b8",
+      primaryColor: "#6366f1",
+      primaryTextColor: "#ffffff",
+      primaryBorderColor: "#4f46e5",
+      secondaryColor: "#1e293b",
+      tertiaryColor: "#1e293b",
+    },
+  };
+  const LIGHT = {
+    theme: "base",
+    themeVariables: {
+      fontFamily: "Inter, system-ui, sans-serif",
+      fontSize: "13px",
+      background: "#ffffff",
+      mainBkg: "#ffffff",
+      nodeBorder: "#cbd5e1",
+      clusterBkg: "#f8fafc",
+      clusterBorder: "#e2e8f0",
+      titleColor: "#0f172a",
+      textColor: "#0f172a",
+      edgeLabelBackground: "#ffffff",
+      lineColor: "#64748b",
+      primaryColor: "#6366f1",
+      primaryTextColor: "#ffffff",
+      primaryBorderColor: "#4f46e5",
+      secondaryColor: "#ffffff",
+      tertiaryColor: "#ffffff",
+    },
+  };
+
+  const source = document.getElementById("graph").textContent.trim();
+  const diagram = document.getElementById("diagram");
+  const toggle = document.getElementById("themeToggle");
+  let counter = 0;
+  let dark = true;
+
+  function applyTheme() {
+    const vars = dark ? DARK : LIGHT;
+    document.documentElement.style.setProperty("--bg", vars.themeVariables.background);
+    document.documentElement.style.setProperty("--panel", vars.themeVariables.mainBkg);
+    document.documentElement.style.setProperty("--border", vars.themeVariables.clusterBorder);
+    document.documentElement.style.setProperty("--text", vars.themeVariables.textColor);
+    document.documentElement.style.setProperty("--muted", dark ? "#94a3b8" : "#64748b");
+    document.documentElement.style.setProperty("--accent", "#6366f1");
+  }
+
+  async function render() {
+    const vars = dark ? DARK : LIGHT;
+    mermaid.initialize(Object.assign({ startOnLoad: false, securityLevel: "loose" }, vars));
+    const id = "graphSvg" + (++counter);
+    const { svg } = await mermaid.render(id, source);
+    diagram.innerHTML = svg;
+    applyTheme();
+  }
+
+  toggle.addEventListener("click", () => { dark = !dark; render(); });
+  render();
+</script>
+</body>
+</html>

@@ -65,6 +65,10 @@ export function CableChooser() {
                       {active && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-primary" />}
                     </div>
                     <p className="mt-1 pl-5 text-[11px] leading-snug text-muted-foreground">{def.purpose}</p>
+                    <p className="mt-1 pl-5 text-[11px] leading-snug text-muted-foreground/70">
+                      <span className="font-semibold text-muted-foreground">Why it works: </span>
+                      {c.why}
+                    </p>
                   </button>
                 );
               })}

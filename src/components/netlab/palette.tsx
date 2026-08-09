@@ -1,19 +1,22 @@
 "use client";
 
-import { GripVertical } from "lucide-react";
+import { GripVertical, Lock } from "lucide-react";
 import { DEVICE_TYPES } from "@/lib/net/devices";
 import type { DeviceType } from "@/lib/net/types";
 import { useNetlab } from "./netlab-store";
 import { DeviceIcon, deviceColor } from "./device-icon";
 import { deviceTip } from "@/lib/net/explain";
 import { cn } from "@/lib/utils";
+import { devicesAtLevel, type LabLevel } from "./lab-levels";
 
 const ORDER: DeviceType[] = ["pc", "laptop", "server", "printer", "switch", "hub", "router", "wirelessRouter", "accessPoint", "firewall", "cloud"];
 
 export const PALETTE_DRAG_TYPE = "application/x-netlab-device";
 
-export function Palette() {
+export function Palette({ level }: { level: LabLevel }) {
   const addDevice = useNetlab((s) => s.addDevice);
+  const visible = devicesAtLevel(level, ORDER);
+  const hiddenCount = ORDER.length - visible.length;
 
   const onDragStart = (e: React.DragEvent, type: DeviceType) => {
     e.dataTransfer.setData(PALETTE_DRAG_TYPE, type);
@@ -27,7 +30,7 @@ export function Palette() {
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Devices</p>
         <p className="text-[10px] text-muted-foreground/70">Drag onto the canvas, or click to place.</p>
       </div>
-      {ORDER.map((type) => {
+      {visible.map((type) => {
         const def = DEVICE_TYPES[type];
         return (
           <button
@@ -47,6 +50,12 @@ export function Palette() {
           </button>
         );
       })}
+      {hiddenCount > 0 && (
+        <div className="mt-1 flex items-center gap-1.5 rounded-lg border border-dashed border-border bg-background/40 px-2 py-1.5 text-[10px] text-muted-foreground">
+          <Lock className="h-3 w-3 shrink-0" />
+          {hiddenCount} more devices unlock at {level === "beginner" ? "Intermediate" : "Advanced"} level
+        </div>
+      )}
     </div>
   );
 }

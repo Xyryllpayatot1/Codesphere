@@ -68,6 +68,7 @@ export class NetworkSimulator {
       cables: this.cables,
       macTables: this.macTables,
       wirelessLinks: this.computeWireless(),
+      startupConfigs: this.startupConfigs,
     };
   }
 

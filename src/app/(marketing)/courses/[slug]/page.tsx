@@ -13,6 +13,7 @@ import {
   Play,
   Star,
   Users,
+  BookOpen,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -148,7 +149,7 @@ export default async function CourseDetailPage({ params }: PageProps<"/courses/[
         <aside className="lg:pt-2">
           <Card className="overflow-hidden">
             <div className="flex h-24 items-center justify-center text-5xl" style={{ background: `${course.color}22` }}>
-              <span>{course.icon ?? "📘"}</span>
+              <span>{course.icon ?? <BookOpen className="h-10 w-10" />}</span>
             </div>
             <CardContent className="p-5">
               {stats ? (

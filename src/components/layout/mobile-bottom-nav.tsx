@@ -26,7 +26,8 @@ const ITEMS: NavItem[] = [
       p.startsWith("/certificates") ||
       p.startsWith("/worlds") ||
       p.startsWith("/admin") ||
-      p.startsWith("/study-plan"),
+      p.startsWith("/study-plan") ||
+      p.startsWith("/progress"),
   },
   {
     href: "/learn",
@@ -35,10 +36,10 @@ const ITEMS: NavItem[] = [
     match: (p) => p.startsWith("/learn") || p.startsWith("/courses"),
   },
   {
-    href: "/playground",
+    href: "/practice",
     label: "Practice",
     icon: Code2,
-    match: (p) => p.startsWith("/playground") || p.startsWith("/games") || p.startsWith("/missions") || p.startsWith("/projects") || p.startsWith("/prompts"),
+    match: (p) => p.startsWith("/practice") || p.startsWith("/playground") || p.startsWith("/games") || p.startsWith("/missions") || p.startsWith("/projects") || p.startsWith("/prompts"),
   },
   {
     href: "/networking",
