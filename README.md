@@ -94,6 +94,10 @@ prisma/
 ```bash
 npm install
 # configure DATABASE_URL (PostgreSQL) and AUTH_SECRET
+# Supabase users: use the Supavisor transaction-mode pooler on port 6543
+# (e.g. postgresql://postgres.<ref>:<password>@<region>.pooler.supabase.com:6543/postgres).
+# Port 5432 on the pooler host serves session-mode/IPv6 and can hang or drop
+# idle connections ("Server has closed the connection").
 npm run dev
 ```
 
