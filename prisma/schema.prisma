@@ -74,6 +74,10 @@ model User {
   masteryEvents       MasteryEvent[]
   networkProjects     NetworkProject[]
   networkMissionProgress NetworkMissionProgress[]
+  roomMemberships     RoomMember[]
+  roomSnapshots       RoomSnapshot[] @relation("SavedRoomSnapshots")
+  hostedRooms         CollaborationRoom[] @relation("HostedRooms")
+  releaseViews        UserReleaseView[]
 }
 
 // ─────────────────────────────── CATALOG ───────────────────────────────────
@@ -622,6 +626,121 @@ model NetworkMissionProgress {
   @@unique([userId, slug])
 }
 
+// ─────────────────────────── COLLABORATION ROOMS ────────────────────────────
+//
+// A CollaborationRoom is a shared Networking Lab workspace. The realtime event
+// bus is in-memory (RoomHub); the database only persists room metadata, member
+// roles and debounced workspace snapshots. Snapshot writes are intentionally
+// rare (autosave on a debounce, host manual save, room close).
+
+model CollaborationRoom {
+  id            String    @id @default(cuid())
+  // Short, shareable, non-sensitive identifier, e.g. "7F4K2".
+  code          String    @unique
+  name          String
+  hostId        String
+  host          User      @relation("HostedRooms", fields: [hostId], references: [id], onDelete: Cascade)
+  // networking (only lab rooms in v1)
+  kind          String    @default("networking")
+  // ACTIVE | CLOSED
+  status        String    @default("ACTIVE")
+  // Host locked editing for non-hosts.
+  isLocked      Boolean   @default(false)
+  // Workspace revision persisted on the latest snapshot.
+  revision      Int       @default(0)
+  lastSnapshotAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  members   RoomMember[]
+  snapshots RoomSnapshot[]
+
+  @@index([hostId])
+}
+
+model RoomMember {
+  id         String   @id @default(cuid())
+  roomId     String
+  room       CollaborationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // HOST | COLLABORATOR | VIEWER
+  role       String   @default("COLLABORATOR")
+  joinedAt   DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model RoomSnapshot {
+  id        String    @id @default(cuid())
+  roomId    String
+  room      CollaborationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  revision  Int
+  // The persisted SimSnapshot document.
+  data      Json
+  // manual | autosave | close | reset
+  reason    String    @default("manual")
+  savedBy   String?
+  savedByUser User?   @relation("SavedRoomSnapshots", fields: [savedBy], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+
+  @@index([roomId, revision])
+}
+
+// ──────────────────────────── RELEASES / WHAT'S NEW ─────────────────────────
+//
+// Intentional, user-facing releases only. Git pushes / dev deploys never create
+// Release rows — publication is an explicit admin action.
+
+model Release {
+  id          String    @id @default(cuid())
+  // Semantic version, e.g. "0.8.0".
+  version     String    @unique
+  title       String
+  summary     String
+  description String    @default("")
+  releaseDate DateTime  @default(now())
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  changes      ReleaseChange[]
+  userViews    UserReleaseView[]
+
+  coverImageId String?   @unique
+  coverImage   MediaAsset? @relation("ReleaseCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+
+  @@index([isPublished, releaseDate])
+}
+
+model ReleaseChange {
+  id          String  @id @default(cuid())
+  releaseId   String
+  release     Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  // new | improvement | fix
+  type        String  @default("new")
+  title       String
+  description String  @default("")
+  order       Int     @default(0)
+
+  @@index([releaseId, order])
+}
+
+model UserReleaseView {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  releaseId String
+  release   Release   @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  seenAt    DateTime  @default(now())
+
+  @@unique([userId, releaseId])
+  @@index([userId])
+}
+
 // ─────────────────────────────── MEDIA ─────────────────────────────────────
 
 model MediaAsset {
@@ -633,6 +752,8 @@ model MediaAsset {
   uploadedById String?
   uploadedBy   User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   createdAt    DateTime  @default(now())
+
+  releaseCover Release? @relation("ReleaseCover")
 }
 
 // ─────────────────────── PROGRESSION: XP / COINS ───────────────────────────

@@ -388,3 +388,22 @@ export const MONACO_LANGUAGE = {
 } as const;
 
 export const APP_NAME = "CodeSphere";
+
+// ---------------------------------------------------------------------------
+// Releases / What's New
+// ---------------------------------------------------------------------------
+
+export const RELEASE_CHANGE_TYPES = {
+  NEW: "new",
+  IMPROVEMENT: "improvement",
+  FIX: "fix",
+} as const;
+
+export type ReleaseChangeType = (typeof RELEASE_CHANGE_TYPES)[keyof typeof RELEASE_CHANGE_TYPES];
+
+/** Change-type metadata. `section` is the heading used on the release detail page. */
+export const RELEASE_CHANGE_META: Record<ReleaseChangeType, { label: string; section: string }> = {
+  new: { label: "New feature", section: "New features" },
+  improvement: { label: "Improvement", section: "Improvements" },
+  fix: { label: "Bug fix", section: "Bug fixes" },
+};

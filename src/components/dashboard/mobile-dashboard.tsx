@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { QuickSession, ContinueLearningCard } from "@/components/dashboard/quick-session";
+import { WhatsNewCard } from "@/components/dashboard/whats-new-card";
 import { timeAgo } from "@/lib/utils";
 import type { DashboardData } from "@/lib/dashboard-data";
 
@@ -60,6 +61,9 @@ export function MobileDashboardView({
 
       {/* Quick session */}
       <QuickSession data={data} />
+
+      {/* What's New */}
+      {data.latestRelease && <WhatsNewCard release={data.latestRelease} />}
 
       {/* Today's goal */}
       <div className="rounded-xl border border-border bg-card p-4">

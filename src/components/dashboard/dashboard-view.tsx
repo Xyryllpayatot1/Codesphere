@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "@/components/dashboard/plan-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { WhatsNewCard } from "@/components/dashboard/whats-new-card";
 import { type DashboardData } from "@/lib/dashboard-data";
 
 // recharts is the largest client dependency on the dashboard; split it into its
@@ -84,6 +85,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
         </div>
 
         <div className="space-y-6">
+          {data.latestRelease && <WhatsNewCard release={data.latestRelease} />}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Level {data.level}</CardTitle>

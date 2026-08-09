@@ -11,6 +11,7 @@ import type { CableType, Device, PacketType, ServerServiceKey, SimSnapshot, Trac
 import { randomMac } from "@/lib/net/ip";
 import { toast } from "@/store/use-toast";
 import { traceAnimations, type Burst, type PacketAnim } from "./animations";
+import type { RoomEvent } from "@/lib/rooms/types";
 
 export type NetTool = "select" | "cable" | "delete" | "ping";
 export type NetMode = "mission" | "sandbox";
@@ -72,6 +73,14 @@ type NetlabState = {
   learn: TeachingNote | null;
   packets: PacketAnim[];
   bursts: Burst[];
+
+  // ─── collaboration bridge ──────────────────────────────────────────────
+  /** Set by the collab store while a room is joined; every local edit is
+   *  forwarded here so it can be posted to the room. Null outside a room. */
+  collabEmitter: ((event: RoomEvent) => void) | null;
+  setCollabEmitter: (fn: ((event: RoomEvent) => void) | null) => void;
+  /** Apply a workspace event received from a peer to the local sim. */
+  applyRemoteEvent: (event: RoomEvent) => void;
 
   refresh: () => void;
   init: (snapshot: SimSnapshot | null, opts?: { projectId?: string | null; title?: string; missionSlug?: string | null }) => void;
@@ -164,6 +173,11 @@ function usedPorts(sim: NetworkSimulator): Set<string> {
 
 const snap = (v: number) => Math.round(v / GRID) * GRID;
 
+/** Throttle DEVICE_MOVED broadcasts during a drag; the final snapped position
+ *  (fired from snapDevice on pointer-up) is always sent. */
+const moveEmitThrottle = new Map<string, number>();
+const MOVE_EMIT_MS = 120;
+
 export const useNetlab = create<NetlabState>((set, get) => {
   const freshSim = () => new NetworkSimulator();
 
@@ -200,6 +214,9 @@ export const useNetlab = create<NetlabState>((set, get) => {
     packets: [],
     bursts: [],
 
+    collabEmitter: null,
+    setCollabEmitter: (fn) => set((s) => ({ ...s, collabEmitter: fn })),
+
     refresh: () => set((s) => ({ ...s, version: s.version + 1, dirty: true })),
 
     init: (snapshot, opts) =>
@@ -228,17 +245,22 @@ export const useNetlab = create<NetlabState>((set, get) => {
         bursts: [],
       })),
 
-    newCanvas: () => get().init(null, { title: "My Network" }),
+    newCanvas: () => {
+      get().init(null, { title: "My Network" });
+      get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
+    },
 
     loadTemplate: (name) => {
       get().init(buildTemplate(name), { title: name.replace("-", " ").toUpperCase() });
       toast({ title: "Template loaded", description: name.replace("-", " "), variant: "info" });
+      get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
     },
 
     loadTopology: (name) => {
       const t = buildTopology(name);
       get().init(t, { title: t.devices[0]?.config.name ?? name, missionSlug: get().missionSlug });
       toast({ title: "Topology loaded", description: name, variant: "info" });
+      get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
     },
 
     startMission: (slug) => {
@@ -247,10 +269,12 @@ export const useNetlab = create<NetlabState>((set, get) => {
       get().init(missionStart(m), { title: m.title, missionSlug: slug });
       set((s) => ({ ...s, mode: "mission", missionPickerOpen: false }));
       toast({ title: "Mission started", description: m.short, variant: "info" });
+      get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
     },
 
     exitMission: () => {
       get().init(null, { title: "My Network" });
+      get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
     },
 
     checkMission: () => {
@@ -293,6 +317,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
       const py = g.gridSnap ? snap(Math.max(0, y)) : Math.max(0, y);
       const d = g.sim.addDevice(type, px, py);
       set((s) => ({ ...s, selectedDeviceId: d.id, tool: "select", cableFrom: null, version: s.version + 1, dirty: true }));
+      g.collabEmitter?.({ type: "DEVICE_CREATED", device: d });
     },
 
     removeDevice: (id) => {
@@ -308,19 +333,29 @@ export const useNetlab = create<NetlabState>((set, get) => {
         configDeviceId: configDeviceId === id ? null : configDeviceId,
         contextMenu: s.contextMenu?.deviceId === id ? null : s.contextMenu,
       }));
+      get().collabEmitter?.({ type: "DEVICE_DELETED", deviceId: id });
     },
 
     moveDevice: (id, x, y) => {
       get().sim.moveDevice(id, x, y);
       set((s) => ({ ...s, version: s.version + 1 }));
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const last = moveEmitThrottle.get(id) ?? 0;
+      if (now - last >= MOVE_EMIT_MS) {
+        moveEmitThrottle.set(id, now);
+        get().collabEmitter?.({ type: "DEVICE_MOVED", deviceId: id, x, y });
+      }
     },
 
     snapDevice: (id) => {
       const sim = get().sim;
       const d = sim.devices.find((x) => x.id === id);
       if (!d || !get().gridSnap) return;
-      sim.moveDevice(id, snap(d.x), snap(d.y));
+      const x = snap(d.x);
+      const y = snap(d.y);
+      sim.moveDevice(id, x, y);
       set((s) => ({ ...s, version: s.version + 1 }));
+      get().collabEmitter?.({ type: "DEVICE_MOVED", deviceId: id, x, y });
     },
 
     select: (id) => set((s) => ({ ...s, selectedDeviceId: id })),
@@ -389,6 +424,17 @@ export const useNetlab = create<NetlabState>((set, get) => {
       set((s) => ({ ...s, version: s.version + 1, cableFrom: null, dirty: true, learn: note }));
       if (res.ok) {
         toast({ title: "Connected", description: `${from.config.hostname} ↔ ${to.config.hostname} (${CABLE_TYPES[cableType].label})`, variant: "success" });
+        if (res.cable) {
+          get().collabEmitter?.({
+            type: "CABLE_CREATED",
+            cableId: res.cable.id,
+            cableType,
+            fromDevice: from.id,
+            fromPort: fp.id,
+            toDevice: to.id,
+            toPort: tp.id,
+          });
+        }
       } else {
         toast({ title: "Cable rejected", description: `${res.error ?? "Incompatible."} ${cableTip(cableType)}`, variant: "error" });
       }
@@ -397,11 +443,13 @@ export const useNetlab = create<NetlabState>((set, get) => {
     removeCable: (cableId) => {
       get().sim.removeCable(cableId);
       set((s) => ({ ...s, version: s.version + 1, dirty: true }));
+      get().collabEmitter?.({ type: "CABLE_REMOVED", cableId });
     },
 
     undo: () => {
       if (get().sim.undo()) {
         set((s) => ({ ...s, version: s.version + 1, dirty: true, trace: null, diagnosis: null, packets: [], bursts: [] }));
+        get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
       } else {
         toast({ title: "Nothing to undo", variant: "info" });
       }
@@ -430,6 +478,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
       get().sim.updateDeviceConfig(id, { hostname: name.trim(), name: name.trim() });
       get().refresh();
       set((s) => ({ ...s, contextMenu: null }));
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId: id, patch: { hostname: name.trim() } });
     },
 
     rotateDevice: (id) => {
@@ -441,6 +490,8 @@ export const useNetlab = create<NetlabState>((set, get) => {
         contextMenu: null,
         learn: { title: "Device rotated", body: "Rotating moves the connection port to another side of the device.", kind: "info" },
       }));
+      const d = get().sim.devices.find((x) => x.id === id);
+      if (d) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId: id, patch: { rotation: d.rotation } });
     },
 
     duplicateDevice: (id) => {
@@ -454,6 +505,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
         contextMenu: null,
         learn: { title: "Duplicated", body: `${d.config.name} was placed right next to the original.`, kind: "info" },
       }));
+      get().collabEmitter?.({ type: "DEVICE_CREATED", device: d });
     },
 
     copyDevice: (id) => {
@@ -484,6 +536,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
         fresh.dnsRecords = src.dnsRecords ? JSON.parse(JSON.stringify(src.dnsRecords)) : undefined;
         fresh.rotation = src.rotation ?? 0;
         lastId = fresh.id;
+        get().collabEmitter?.({ type: "DEVICE_CREATED", device: fresh });
       }
       set((s) => ({
         ...s,
@@ -498,6 +551,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
       const sim = get().sim;
       const d = sim.devices.find((x) => x.id === id);
       if (!d) return;
+      const removed = sim.cables.filter((c) => c.fromDevice === id || c.toDevice === id).map((c) => c.id);
       sim.disconnectDevice(id);
       set((s) => ({
         ...s,
@@ -506,36 +560,44 @@ export const useNetlab = create<NetlabState>((set, get) => {
         contextMenu: null,
         learn: { title: `${d.config.hostname} disconnected`, body: "All of its cables were removed. The device itself is still here.", kind: "info" },
       }));
+      for (const cableId of removed) get().collabEmitter?.({ type: "CABLE_REMOVED", cableId });
     },
 
     setInterfaceIp: (deviceId, portId, ip, mask) => {
       get().sim.setInterfaceIp(deviceId, portId, ip || undefined, mask || undefined);
       get().refresh();
+      get().collabEmitter?.({ type: "INTERFACE_UPDATED", deviceId, portId, ip: ip || undefined, mask: mask || undefined });
     },
 
     toggleInterface: (deviceId, portId) => {
-      get().sim.toggleInterface(deviceId, portId);
+      const d = get().sim.toggleInterface(deviceId, portId);
       get().refresh();
+      const status = d?.config.interfaces.find((i) => i.id === portId)?.status;
+      if (d && status) get().collabEmitter?.({ type: "INTERFACE_UPDATED", deviceId, portId, status });
     },
 
     setHostname: (deviceId, hostname) => {
       get().sim.updateDeviceConfig(deviceId, { hostname, name: hostname });
       get().refresh();
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { hostname } });
     },
 
     setDhcp: (deviceId, dhcp) => {
       get().sim.updateDeviceConfig(deviceId, { dhcp });
       get().refresh();
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { dhcp } });
     },
 
     setGateway: (deviceId, gateway) => {
       get().sim.updateDeviceConfig(deviceId, { gateway: gateway || undefined });
       get().refresh();
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { gateway: gateway || undefined } });
     },
 
     setDns: (deviceId, dns) => {
       get().sim.updateDeviceConfig(deviceId, { dns: dns || undefined });
       get().refresh();
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { dns: dns || undefined } });
     },
 
     renewDhcp: (deviceId) => {
@@ -549,6 +611,8 @@ export const useNetlab = create<NetlabState>((set, get) => {
         toast({ title: `${hostname} DHCP failed`, description: res.error ?? res.summary, variant: "error" });
       }
       get().refresh();
+      const dev = get().sim.devices.find((x) => x.id === deviceId);
+      if (dev) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, config: dev.config });
     },
 
     setWlan: (deviceId, patch) => {
@@ -558,34 +622,44 @@ export const useNetlab = create<NetlabState>((set, get) => {
       d.config.wlan = { ...(d.config.wlan ?? { ssid: "NetLab", enabled: false }), ...patch };
       sim.updateDeviceConfig(deviceId, { wlan: d.config.wlan });
       get().refresh();
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { wlan: d.config.wlan } });
     },
 
     setDhcpPool: (deviceId, start, end) => {
       get().sim.setDhcpPool(deviceId, start, end);
       get().refresh();
+      get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { dhcpPool: get().sim.devices.find((x) => x.id === deviceId)?.dhcpPool ?? null } });
     },
 
     setDnsRecord: (deviceId, name, ip) => {
       const res = get().sim.addDnsRecord(deviceId, name, ip);
       if (!res.ok) toast({ title: "DNS record", description: res.error ?? "Failed.", variant: "error" });
       get().refresh();
+      const d = get().sim.devices.find((x) => x.id === deviceId);
+      if (d) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { dnsRecords: d.dnsRecords } });
     },
 
     setServiceState: (deviceId, service, on) => {
       const res = get().sim.setServiceState(deviceId, service, on);
       if (!res.ok) toast({ title: "Service", description: res.error ?? "Failed.", variant: "error" });
       get().refresh();
+      const d = get().sim.devices.find((x) => x.id === deviceId);
+      if (d) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { services: d.services } });
     },
 
     addRoute: (deviceId, network, mask, nextHop) => {
       const res = get().sim.addRoute(deviceId, network, mask, nextHop);
       if (!res.ok) toast({ title: "Route rejected", description: res.error ?? "Failed.", variant: "error" });
       get().refresh();
+      const d = get().sim.devices.find((x) => x.id === deviceId);
+      if (d) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { routes: d.routes } });
     },
 
     removeRoute: (deviceId, routeId) => {
       get().sim.removeRoute(deviceId, routeId);
       get().refresh();
+      const d = get().sim.devices.find((x) => x.id === deviceId);
+      if (d) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, patch: { routes: d.routes } });
     },
 
     runPing: (sourceId, target) => {
@@ -608,6 +682,9 @@ export const useNetlab = create<NetlabState>((set, get) => {
       } else {
         toast({ title: "Ping blocked", description: r.error ?? r.summary, variant: "error" });
       }
+      const packetId = `pkt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      get().collabEmitter?.({ type: "PACKET_STARTED", packetId, sourceId, target, packetType: "icmp" });
+      get().collabEmitter?.({ type: "PACKET_COMPLETED", packetId, sourceId, target, packetType: "icmp", ok: r.ok, summary: r.summary });
     },
 
     runPacket: (sourceId, target, type) => {
@@ -623,6 +700,9 @@ export const useNetlab = create<NetlabState>((set, get) => {
         bursts: [...s.bursts, ...bursts],
       }));
       if (r.ok) toast({ title: "Packet delivered", description: r.summary, variant: "success" });
+      const packetId = `pkt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      get().collabEmitter?.({ type: "PACKET_STARTED", packetId, sourceId, target, packetType: type });
+      get().collabEmitter?.({ type: "PACKET_COMPLETED", packetId, sourceId, target, packetType: type, ok: r.ok, summary: r.summary });
     },
 
     runDiagnose: (sourceId, target) => {
@@ -735,6 +815,18 @@ export const useNetlab = create<NetlabState>((set, get) => {
         version: s.version + 1,
         dirty: true,
       }));
+
+      if (result.device) {
+        const dev = get().sim.devices.find((d) => d.id === deviceId);
+        if (dev) get().collabEmitter?.({ type: "DEVICE_UPDATED", deviceId, config: dev.config });
+      }
+      get().collabEmitter?.({
+        type: "COMMAND_EXECUTED",
+        deviceId,
+        command: trimmed,
+        ok: result.ok,
+        summary: result.reason ?? (result.ok ? "ok" : "failed"),
+      });
     },
 
     togglePower: (deviceId) => {
@@ -759,6 +851,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
           kind: "info",
         },
       }));
+      get().collabEmitter?.({ type: "DEVICE_POWER_CHANGED", deviceId, poweredOn: off });
     },
 
     setPan: (pan) => set((s) => ({ ...s, pan })),
@@ -798,6 +891,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
         if (!data.snapshot) throw new Error("no snapshot");
         get().init(data.snapshot, { projectId: data.id ?? id, title: data.title ?? "My Network" });
         toast({ title: "Project opened", description: data.title, variant: "success" });
+        get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
       } catch {
         toast({ title: "Load failed", description: "Could not open that project.", variant: "error" });
       }
@@ -829,8 +923,119 @@ export const useNetlab = create<NetlabState>((set, get) => {
         const data = JSON.parse(text) as SimSnapshot;
         get().init(data, { title: data.devices[0]?.config.name ?? "Imported Network" });
         toast({ title: "Import complete", variant: "success" });
+        get().collabEmitter?.({ type: "WORKSPACE_SYNC", snapshot: get().sim.snapshot });
       } catch {
         toast({ title: "Import failed", description: "That file is not a valid network snapshot.", variant: "error" });
+      }
+    },
+
+    applyRemoteEvent: (event) => {
+      const g = get();
+      const sim = g.sim;
+      const copy = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
+      switch (event.type) {
+        case "DEVICE_CREATED": {
+          if (sim.devices.some((d) => d.id === event.device.id)) break;
+          sim.devices.push(copy(event.device));
+          sim.computeWireless();
+          g.refresh();
+          break;
+        }
+        case "DEVICE_MOVED": {
+          const d = sim.devices.find((x) => x.id === event.deviceId);
+          if (d) {
+            d.x = event.x;
+            d.y = event.y;
+            g.refresh();
+          }
+          break;
+        }
+        case "DEVICE_DELETED": {
+          if (!sim.devices.some((d) => d.id === event.deviceId)) break;
+          sim.devices = sim.devices.filter((d) => d.id !== event.deviceId);
+          sim.cables = sim.cables.filter((c) => c.fromDevice !== event.deviceId && c.toDevice !== event.deviceId);
+          sim.computeWireless();
+          set((s) => ({
+            ...s,
+            version: s.version + 1,
+            selectedDeviceId: s.selectedDeviceId === event.deviceId ? null : s.selectedDeviceId,
+            pingSourceId: s.pingSourceId === event.deviceId ? null : s.pingSourceId,
+            configDeviceId: s.configDeviceId === event.deviceId ? null : s.configDeviceId,
+          }));
+          break;
+        }
+        case "DEVICE_UPDATED": {
+          const d = sim.devices.find((x) => x.id === event.deviceId);
+          if (!d) break;
+          if (event.config) {
+            d.config = copy(event.config);
+            sim.computeWireless();
+            g.refresh();
+          } else if (event.patch) {
+            const p = event.patch;
+            if (p.hostname !== undefined) sim.updateDeviceConfig(event.deviceId, { hostname: p.hostname, name: p.hostname });
+            if (p.dhcp !== undefined) sim.updateDeviceConfig(event.deviceId, { dhcp: p.dhcp });
+            if (p.gateway !== undefined) sim.updateDeviceConfig(event.deviceId, { gateway: p.gateway });
+            if (p.dns !== undefined) sim.updateDeviceConfig(event.deviceId, { dns: p.dns });
+            if (p.wlan !== undefined) sim.updateDeviceConfig(event.deviceId, { wlan: p.wlan });
+            if (p.rotation !== undefined) d.rotation = p.rotation;
+            if (p.routes !== undefined) d.routes = copy(p.routes);
+            if (p.dhcpPool !== undefined) d.dhcpPool = p.dhcpPool ? { ...p.dhcpPool } : null;
+            if (p.dnsRecords !== undefined) d.dnsRecords = copy(p.dnsRecords);
+            if (p.services !== undefined) d.services = copy(p.services);
+            sim.computeWireless();
+            g.refresh();
+          }
+          break;
+        }
+        case "INTERFACE_UPDATED": {
+          const d = sim.devices.find((x) => x.id === event.deviceId);
+          const iface = d?.config.interfaces.find((i) => i.id === event.portId);
+          if (d && iface) {
+            if (event.ip !== undefined) iface.ip = event.ip || undefined;
+            if (event.mask !== undefined) iface.mask = event.mask || undefined;
+            if (event.status !== undefined) iface.status = event.status;
+            g.refresh();
+          }
+          break;
+        }
+        case "DEVICE_POWER_CHANGED": {
+          sim.setPower(event.deviceId, event.poweredOn);
+          g.refresh();
+          break;
+        }
+        case "CABLE_CREATED": {
+          if (sim.cables.some((c) => c.id === event.cableId)) break;
+          const res = sim.connect(event.fromDevice, event.fromPort, event.toDevice, event.toPort, event.cableType);
+          if (res.ok && res.cable) {
+            res.cable.id = event.cableId;
+            g.refresh();
+          }
+          break;
+        }
+        case "CABLE_REMOVED": {
+          if (!sim.cables.some((c) => c.id === event.cableId)) break;
+          sim.removeCable(event.cableId);
+          g.refresh();
+          break;
+        }
+        case "WORKSPACE_SYNC":
+        case "TOPOLOGY_RESET": {
+          sim.load(event.snapshot);
+          g.refresh();
+          break;
+        }
+        case "PACKET_STARTED": {
+          const r = sim.ping(event.sourceId, event.target);
+          if (r) {
+            const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+            const { packets, bursts } = traceAnimations(sim.devices, sim.cables, r, now);
+            set((s) => ({ ...s, packets: [...s.packets, ...packets], bursts: [...s.bursts, ...bursts] }));
+          }
+          break;
+        }
+        default:
+          break;
       }
     },
   };

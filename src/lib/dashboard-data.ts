@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { levelFromXp, levelTitle } from "@/lib/engine/xp";
 import { todayKey, fromDateKey } from "@/lib/utils";
+import { isReleaseSeen } from "@/lib/services/releases";
+import type { LatestReleaseView } from "@/components/dashboard/whats-new-card";
 
 export type DashboardData = {
   userName: string;
@@ -19,6 +21,7 @@ export type DashboardData = {
   continueItem: ContinueItem | null;
   activities: ActivityRow[];
   chart: { day: string; minutes: number }[];
+  latestRelease: LatestReleaseView | null;
 };
 
 export type PlanRow = {
@@ -130,6 +133,23 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       : [],
   ]);
 
+  const latestReleaseRow = await prisma.release.findFirst({
+    where: { isPublished: true },
+    orderBy: { releaseDate: "desc" },
+    select: {
+      id: true,
+      version: true,
+      title: true,
+      summary: true,
+      releaseDate: true,
+      coverImage: { select: { id: true, url: true, filename: true, mimeType: true, size: true } },
+    },
+  });
+
+  const latestRelease: LatestReleaseView | null = latestReleaseRow
+    ? { ...latestReleaseRow, seen: await isReleaseSeen(userId, latestReleaseRow.id) }
+    : null;
+
   const lv = levelFromXp(user?.xp ?? 0);
   const lessonById = new Map(lessons.map((l) => [l.id, l]));
 
@@ -197,6 +217,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       lesson: a.lesson ? { title: a.lesson.title, slug: a.lesson.slug, moduleSlug: a.lesson.module.slug } : null,
     })),
     chart: buildChart(sessions),
+    latestRelease,
   };
 }
 

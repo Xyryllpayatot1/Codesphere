@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield, Users, BookOpen, Rocket, Clock, Map as MapIcon } from "lucide-react";
+import { Shield, Users, BookOpen, Rocket, Clock, Map as MapIcon, Sparkles } from "lucide-react";
 
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubmissionReview } from "@/components/admin/submission-review";
 import { AdminWorldManager, type AdminWorld } from "@/components/admin/world-manager";
+import { ReleaseManager } from "@/components/admin/release-manager";
+import { listReleasesForAdmin } from "@/lib/services/releases";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,8 @@ export default async function AdminPage() {
     prisma.world.findMany({ orderBy: { order: "asc" } }),
     prisma.game.findMany({ where: { worldId: { not: null } }, select: { id: true, key: true, name: true, isBoss: true, worldId: true } }),
   ]);
+
+  const releases = await listReleasesForAdmin();
 
   const gamesByWorld = new Map<string, { id: string; key: string; name: string }[]>();
   for (const g of worldGames) {
@@ -142,6 +146,17 @@ export default async function AdminPage() {
         </CardHeader>
         <CardContent>
           <AdminWorldManager worlds={adminWorlds} gamesByWorld={Object.fromEntries(gamesByWorld)} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" /> Update notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReleaseManager releases={releases} />
         </CardContent>
       </Card>
 
