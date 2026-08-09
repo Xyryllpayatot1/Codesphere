@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  verification: {
+    google: "by3-3qVIIcJUfwuPYe2YuahGQgsSQEDwkUUh0eHhocE",
+  },
 };
 
 export default async function LandingPage() {
