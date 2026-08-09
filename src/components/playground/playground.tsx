@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/learning/editor/code-editor";
 import { cn } from "@/lib/utils";
 
-const INITIAL_HTML = `<h1>Hello, CodeSphere!</h1>
+const INITIAL_HTML = `<h1>Hello, CreyvaPH!</h1>
 <p>Edit this code and hit Run.</p>`;
 
 const INITIAL_CSS = `body {

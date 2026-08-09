@@ -3,7 +3,7 @@
 Date: 2026-08-08 · Branch: `main`
 
 Two tasks were completed in this session on top of the released redesign (`7f23f81`):
-1. **Emoji removal** — strip decorative emojis from the app-owned CodeSphere UI.
+1. **Emoji removal** — strip decorative emojis from the app-owned CreyvaPH UI.
 2. **Networking Lab realism upgrade** — make the lab behave like a real network.
 
 Both are verified with `npx tsc --noEmit`, `npx eslint`, `npx next build`, and the

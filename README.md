@@ -1,20 +1,20 @@
-# CodeSphere
+# CreyvaPH
 
 **Educational Technology Platform**
 **Created & Led by Jhon Xyryll Samoy**
-**© 2026 CodeSphere**
+**© 2026 CreyvaPH**
 
-CodeSphere is an educational technology platform designed to strengthen the technical and digital skills of students through interactive programming lessons, hands-on exercises, gamified learning, and virtual networking laboratories.
+CreyvaPH is an educational technology platform designed to strengthen the technical and digital skills of students through interactive programming lessons, hands-on exercises, gamified learning, and virtual networking laboratories.
 
 ---
 
 ## Description
 
-CodeSphere turns passive technical education into hands-on practice. Students learn by doing — writing and running real code in a live playground, completing auto-graded exercises and quizzes, building portfolio projects, and experimenting in a full virtual networking laboratory. Progress, XP, streaks, achievements and certificates keep learning motivating, while a smart study plan adapts to each learner's schedule.
+CreyvaPH turns passive technical education into hands-on practice. Students learn by doing — writing and running real code in a live playground, completing auto-graded exercises and quizzes, building portfolio projects, and experimenting in a full virtual networking laboratory. Progress, XP, streaks, achievements and certificates keep learning motivating, while a smart study plan adapts to each learner's schedule.
 
 ## Mission
 
-> "CodeSphere aims to make technical education more practical, accessible, and engaging by helping students develop programming, web development, networking, and digital technology skills through interactive learning and hands-on experimentation."
+> "CreyvaPH aims to make technical education more practical, accessible, and engaging by helping students develop programming, web development, networking, and digital technology skills through interactive learning and hands-on experimentation."
 
 ## Vision
 
@@ -33,7 +33,7 @@ A world where every student can build practical technical skills — not just re
 
 ## Creator
 
-CodeSphere was conceived and led by **Jhon Xyryll Samoy** as a student-driven educational technology project focused on helping learners build practical technical skills through hands-on digital experiences.
+CreyvaPH was conceived and led by **Jhon Xyryll Samoy** as a student-driven educational technology project focused on helping learners build practical technical skills through hands-on digital experiences.
 
 - **Founder & Lead Developer** — Jhon Xyryll Samoy
 - **Head of Team Xy**
@@ -58,7 +58,7 @@ CodeSphere was conceived and led by **Jhon Xyryll Samoy** as a student-driven ed
 
 ## Development Approach
 
-CodeSphere is built around honest, deterministic learning:
+CreyvaPH is built around honest, deterministic learning:
 
 - Exercises are graded against clear, defined outcomes — no guesswork.
 - The study planner and networking engine are deterministic and testable.
@@ -93,7 +93,10 @@ prisma/
 
 ```bash
 npm install
+cp .env.example .env   # then fill in real values (see .env.example)
 # configure DATABASE_URL (PostgreSQL) and AUTH_SECRET
+# NEXT_PUBLIC_SITE_URL is used for canonical URLs / sitemap / Open Graph and
+# must be set to the final public origin BEFORE `npm run build` in production.
 # Supabase users: use the Supavisor transaction-mode pooler on port 6543
 # (e.g. postgresql://postgres.<ref>:<password>@<region>.pooler.supabase.com:6543/postgres).
 # Port 5432 on the pooler host serves session-mode/IPv6 and can hang or drop
@@ -111,38 +114,42 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run lint` — ESLint
 - `npm run icons` — regenerate PWA assets
 
+## Rebranding
+
+This project was formerly known as **CodeSphere** and was renamed to **CreyvaPH**. The rename covers user-visible branding, metadata, and documentation. Historical development records (e.g. `docs/DEVELOPMENT_RECORD.md`) and the in-app "What's New" release history retain their original entries, which were published under the former name. See [`docs/BRAND.md`](docs/BRAND.md) for the full branding reference, including identifiers deliberately kept stable (session cookies, account emails, achievement/title keys) to avoid resetting user data. See [`docs/RENDER_MIGRATION.md`](docs/RENDER_MIGRATION.md) for the deployment move and [`docs/GOOGLE_SEARCH_CONSOLE.md`](docs/GOOGLE_SEARCH_CONSOLE.md) for search verification.
+
 ## Credits
 
-- **Product** — CodeSphere
+- **Product** — CreyvaPH
 - **Creator & Project Lead** — Jhon Xyryll Samoy (Founder & Lead Developer · Head of Team Xy · ICT Club President 2026)
 - **Technology** — see the in-app [Credits](/credits) page or the table above.
 
 ## Copyright & Ownership
 
 ```
-CodeSphere
+CreyvaPH
 Copyright © 2026 Jhon Xyryll Samoy.
 All rights reserved.
 ```
 
-- **Project:** CodeSphere
+- **Project:** CreyvaPH
 - **Creator:** Jhon Xyryll Samoy
 - **Role:** Founder & Lead Developer (Head of Team Xy · ICT Club President 2026)
 - **Copyright year:** 2026
 
-CodeSphere is an educational technology platform developed as a student-driven project focused on practical programming, web development, networking, and digital technology education.
+CreyvaPH is an educational technology platform developed as a student-driven project focused on practical programming, web development, networking, and digital technology education.
 
 ### Original project materials
 
-The following are original project-owned materials created for CodeSphere: the application source code under `src/`, the original UI/UX design, educational content (lessons, exercises, quizzes, games), the networking simulation architecture and logic, project documentation, and original graphics and branding. Seed data in `prisma/seed.ts` contains the original curriculum content.
+The following are original project-owned materials created for CreyvaPH: the application source code under `src/`, the original UI/UX design, educational content (lessons, exercises, quizzes, games), the networking simulation architecture and logic, project documentation, and original graphics and branding. Seed data in `prisma/seed.ts` contains the original curriculum content.
 
 ### AI-assisted development disclosure
 
-CodeSphere was developed using AI-assisted software development tools alongside human-led product design, architecture, testing, and development direction. The repository may contain human-created original work, AI-assisted work, third-party code, and open-source dependencies.
+CreyvaPH was developed using AI-assisted software development tools alongside human-led product design, architecture, testing, and development direction. The repository may contain human-created original work, AI-assisted work, third-party code, and open-source dependencies.
 
 ### Third-party software notice
 
-CodeSphere is built on widely used open-source technologies — including Next.js, React, TypeScript, Prisma, Tailwind CSS, Zustand, TanStack Query, and others — which remain the property of their respective authors and are used under their own licenses. CodeSphere does not claim ownership over third-party libraries, frameworks, icons, fonts, or other external resources. See [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) for the full list with versions, licenses, and sources.
+CreyvaPH is built on widely used open-source technologies — including Next.js, React, TypeScript, Prisma, Tailwind CSS, Zustand, TanStack Query, and others — which remain the property of their respective authors and are used under their own licenses. CreyvaPH does not claim ownership over third-party libraries, frameworks, icons, fonts, or other external resources. See [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) for the full list with versions, licenses, and sources.
 
 ### Open-source dependency notice
 
@@ -150,7 +157,7 @@ Third-party dependencies are distributed under their own open-source licenses (M
 
 ### Copyright vs. trademark
 
-Copyright protects original expression and is claimed above for CodeSphere materials. Trademark registration is separate from copyright protection. The CodeSphere name is not claimed as a registered trademark unless formal registration is completed.
+Copyright protects original expression and is claimed above for CreyvaPH materials. Trademark registration is separate from copyright protection. The CreyvaPH name is not claimed as a registered trademark unless formal registration is completed.
 
 ### Documentation
 
@@ -163,4 +170,4 @@ For the full ownership and development record, see:
 
 ## License
 
-All rights reserved. CodeSphere and its content are © 2026 Jhon Xyryll Samoy. No open-source license is applied to the project's original materials. Third-party dependencies retain their own licenses (see above).
+All rights reserved. CreyvaPH and its content are © 2026 Jhon Xyryll Samoy. No open-source license is applied to the project's original materials. Third-party dependencies retain their own licenses (see above).

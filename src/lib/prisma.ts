@@ -1,5 +1,5 @@
 /*
- * CodeSphere
+ * CreyvaPH
  * Copyright © 2026 Jhon Xyryll Samoy
  * All rights reserved.
  */
@@ -50,7 +50,7 @@ function createPool(): pg.Pool {
     maxLifetimeSeconds: 45,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
-    application_name: "codesphere",
+    application_name: "creyvaph",
   });
   // An idle pooled client can be dropped by the pooler at any time. Without a
   // listener, node treats the emitted "error" as an uncaught exception and

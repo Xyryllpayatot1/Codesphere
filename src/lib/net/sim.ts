@@ -22,6 +22,9 @@ import { SERVER_SERVICE_KEYS } from "./types";
 
 export type ConnectResult = { ok: boolean; error?: string; cable?: Cable };
 
+/** Every canned scenario the lab can boot into. */
+export type TemplateName = "small-lan" | "two-router" | "wifi" | "internet" | "nos-basic" | "nos-faults" | "nos-faults-routed" | "nos-capstone";
+
 let GLOBAL_ID = 0;
 const nid = () => `${Date.now().toString(36)}-${(GLOBAL_ID++).toString(36)}`;
 const randomCloneMac = () => randomMac();
@@ -444,12 +447,12 @@ export class NetworkSimulator {
   }
 
   // ------------------------------------------------------- canned scenarios
-  loadTemplate(name: "small-lan" | "two-router" | "wifi" | "internet") {
+  loadTemplate(name: TemplateName) {
     this.load(buildTemplate(name));
   }
 }
 
-export function buildTemplate(name: "small-lan" | "two-router" | "wifi" | "internet"): SimSnapshot {
+export function buildTemplate(name: TemplateName): SimSnapshot {
   const sim = new NetworkSimulator();
   sim.name = name;
   const cable = (a: { id: string; port: string }, b: { id: string; port: string }, type: CableType) => {
@@ -514,7 +517,7 @@ export function buildTemplate(name: "small-lan" | "two-router" | "wifi" | "inter
     pc.config.gateway = "192.168.1.1";
     cable({ id: pc.id, port: "eth0" }, { id: wr.id, port: "eth1" }, "copperCrossover");
     cable({ id: ap.id, port: "eth0" }, { id: wr.id, port: "eth2" }, "copperStraight");
-  } else {
+  } else if (name === "internet") {
     const cloud = sim.addDevice("cloud", 140, 140);
     const r = sim.addDevice("router", 420, 160);
     const fw = sim.addDevice("firewall", 420, 240);
@@ -541,6 +544,119 @@ export function buildTemplate(name: "small-lan" | "two-router" | "wifi" | "inter
     pc1.config.gateway = "192.168.1.1";
     pc2.config.interfaces[0] = { ...pc2.config.interfaces[0], ip: "192.168.1.11", mask: "255.255.255.0", status: "up" };
     pc2.config.gateway = "192.168.1.1";
+  } else if (name === "nos-basic") {
+    // NOS: a clean managed LAN. SW1's management interface is administratively
+    // down — the learner must bring it up before the switch answers pings.
+    const sw = sim.addDevice("switch", 420, 240);
+    const pc1 = sim.addDevice("pc", 150, 150);
+    const pc2 = sim.addDevice("pc", 690, 150);
+    const mgmt = sim.addDevice("pc", 420, 400);
+    sw.config.hostname = "SW1";
+    pc1.config.hostname = "PC1";
+    pc2.config.hostname = "PC2";
+    mgmt.config.hostname = "MgmtPC";
+    cable({ id: pc1.id, port: "eth0" }, { id: sw.id, port: "eth0" }, "copperStraight");
+    cable({ id: pc2.id, port: "eth0" }, { id: sw.id, port: "eth1" }, "copperStraight");
+    cable({ id: mgmt.id, port: "eth0" }, { id: sw.id, port: "eth2" }, "copperStraight");
+    sw.config.interfaces[0] = { ...sw.config.interfaces[0], status: "down" };
+  } else if (name === "nos-faults") {
+    // NOS: the same managed LAN, but broken in three ways. MgmtPC is healthy so
+    // learners can compare a working host against the faulted ones.
+    const sw = sim.addDevice("switch", 420, 240);
+    const pc1 = sim.addDevice("pc", 150, 150);
+    const pc2 = sim.addDevice("pc", 690, 150);
+    const mgmt = sim.addDevice("pc", 420, 400);
+    sw.config.hostname = "SW1";
+    pc1.config.hostname = "PC1";
+    pc2.config.hostname = "PC2";
+    mgmt.config.hostname = "MgmtPC";
+    cable({ id: pc1.id, port: "eth0" }, { id: sw.id, port: "eth0" }, "copperStraight");
+    cable({ id: pc2.id, port: "eth0" }, { id: sw.id, port: "eth1" }, "copperStraight");
+    cable({ id: mgmt.id, port: "eth0" }, { id: sw.id, port: "eth2" }, "copperStraight");
+    sw.config.interfaces[0] = { ...sw.config.interfaces[0], status: "down" };
+    pc1.config.interfaces[0] = { ...pc1.config.interfaces[0], ip: "192.168.1.200", mask: "255.255.0.0", status: "up" };
+    pc2.config.interfaces[0] = { ...pc2.config.interfaces[0], ip: undefined, mask: undefined, status: "up" };
+    mgmt.config.interfaces[0] = { ...mgmt.config.interfaces[0], ip: "192.168.1.100", mask: "255.255.255.0", status: "up" };
+    mgmt.config.gateway = "192.168.1.1";
+  } else if (name === "nos-faults-routed") {
+    // NOS: routed network with a down interface on R2 and both static routes
+    // missing. R1's LAN is fine, so failures trace to R2 and the routing table.
+    const r1 = sim.addDevice("router", 260, 200);
+    const r2 = sim.addDevice("router", 600, 200);
+    const sw1 = sim.addDevice("switch", 140, 340);
+    const sw2 = sim.addDevice("switch", 720, 340);
+    const pc1 = sim.addDevice("pc", 50, 460);
+    const pc2 = sim.addDevice("pc", 920, 460);
+    r1.config.hostname = "R1";
+    r2.config.hostname = "R2";
+    sw1.config.hostname = "SW1";
+    sw2.config.hostname = "SW2";
+    pc1.config.hostname = "PC1";
+    pc2.config.hostname = "PC2";
+    cable({ id: sw1.id, port: "eth0" }, { id: r1.id, port: "eth0" }, "copperStraight");
+    cable({ id: sw2.id, port: "eth0" }, { id: r2.id, port: "eth0" }, "copperStraight");
+    cable({ id: r1.id, port: "serial0" }, { id: r2.id, port: "serial0" }, "serial");
+    cable({ id: pc1.id, port: "eth0" }, { id: sw1.id, port: "eth1" }, "copperStraight");
+    cable({ id: pc2.id, port: "eth0" }, { id: sw2.id, port: "eth1" }, "copperStraight");
+    r1.config.interfaces[0] = { ...r1.config.interfaces[0], ip: "192.168.1.1", mask: "255.255.255.0", status: "up" };
+    r1.config.interfaces.find((i) => i.id === "serial0")!.ip = "10.0.0.1";
+    r1.config.interfaces.find((i) => i.id === "serial0")!.mask = "255.255.255.252";
+    r1.config.interfaces.find((i) => i.id === "serial0")!.status = "up";
+    r2.config.interfaces[0] = { ...r2.config.interfaces[0], ip: "192.168.2.1", mask: "255.255.255.0", status: "down" };
+    r2.config.interfaces.find((i) => i.id === "serial0")!.ip = "10.0.0.2";
+    r2.config.interfaces.find((i) => i.id === "serial0")!.mask = "255.255.255.252";
+    r2.config.interfaces.find((i) => i.id === "serial0")!.status = "up";
+    pc1.config.interfaces[0] = { ...pc1.config.interfaces[0], ip: "192.168.1.10", mask: "255.255.255.0", status: "up" };
+    pc1.config.gateway = "192.168.1.1";
+    pc2.config.interfaces[0] = { ...pc2.config.interfaces[0], ip: "192.168.2.10", mask: "255.255.255.0", status: "up" };
+    pc2.config.gateway = "192.168.2.1";
+  } else if (name === "nos-capstone") {
+    // NOS capstone: two sites, two routers over a serial link, and a two-VLAN
+    // access layer at Site A (staff VLAN 10 + isolated guest VLAN 20).
+    const swA = sim.addDevice("switch", 300, 300);
+    const swB = sim.addDevice("switch", 780, 300);
+    const r1 = sim.addDevice("router", 540, 140);
+    const r2 = sim.addDevice("router", 540, 460);
+    const pc1 = sim.addDevice("pc", 60, 180);
+    const pc2 = sim.addDevice("pc", 60, 420);
+    const mgmt = sim.addDevice("pc", 300, 60);
+    const pc3 = sim.addDevice("pc", 1020, 180);
+    const pc4 = sim.addDevice("pc", 1020, 420);
+    swA.config.hostname = "SW-A";
+    swB.config.hostname = "SW-B";
+    r1.config.hostname = "R1";
+    r2.config.hostname = "R2";
+    pc1.config.hostname = "PC1";
+    pc2.config.hostname = "PC2";
+    mgmt.config.hostname = "MgmtPC";
+    pc3.config.hostname = "PC3";
+    pc4.config.hostname = "PC4";
+    cable({ id: pc1.id, port: "eth0" }, { id: swA.id, port: "eth1" }, "copperStraight");
+    cable({ id: pc2.id, port: "eth0" }, { id: swA.id, port: "eth2" }, "copperStraight");
+    cable({ id: mgmt.id, port: "eth0" }, { id: swA.id, port: "eth3" }, "copperStraight");
+    cable({ id: swA.id, port: "eth0" }, { id: r1.id, port: "eth0" }, "copperStraight");
+    cable({ id: r1.id, port: "serial0" }, { id: r2.id, port: "serial0" }, "serial");
+    cable({ id: swB.id, port: "eth0" }, { id: r2.id, port: "eth0" }, "copperStraight");
+    cable({ id: pc3.id, port: "eth0" }, { id: swB.id, port: "eth1" }, "copperStraight");
+    cable({ id: pc4.id, port: "eth0" }, { id: swB.id, port: "eth2" }, "copperStraight");
+    r1.config.interfaces[0] = { ...r1.config.interfaces[0], ip: "192.168.1.1", mask: "255.255.255.0", status: "up" };
+    r1.config.interfaces.find((i) => i.id === "serial0")!.ip = "10.0.0.1";
+    r1.config.interfaces.find((i) => i.id === "serial0")!.mask = "255.255.255.252";
+    r1.config.interfaces.find((i) => i.id === "serial0")!.status = "up";
+    r2.config.interfaces[0] = { ...r2.config.interfaces[0], ip: "192.168.2.1", mask: "255.255.255.0", status: "down" };
+    r2.config.interfaces.find((i) => i.id === "serial0")!.ip = "10.0.0.2";
+    r2.config.interfaces.find((i) => i.id === "serial0")!.mask = "255.255.255.252";
+    r2.config.interfaces.find((i) => i.id === "serial0")!.status = "up";
+    pc1.config.interfaces[0] = { ...pc1.config.interfaces[0], ip: "192.168.1.10", mask: "255.255.255.0", status: "up" };
+    pc1.config.gateway = "192.168.1.1";
+    pc2.config.interfaces[0] = { ...pc2.config.interfaces[0], ip: "192.168.1.11", mask: "255.255.255.0", status: "up" };
+    pc2.config.gateway = "192.168.1.1";
+    mgmt.config.interfaces[0] = { ...mgmt.config.interfaces[0], ip: "192.168.1.100", mask: "255.255.255.0", status: "up" };
+    mgmt.config.gateway = "192.168.1.1";
+    pc3.config.interfaces[0] = { ...pc3.config.interfaces[0], ip: "192.168.2.10", mask: "255.255.255.0", status: "up" };
+    pc3.config.gateway = "192.168.2.1";
+    pc4.config.interfaces[0] = { ...pc4.config.interfaces[0], ip: "192.168.3.50", mask: "255.255.255.0", status: "up" };
+    pc4.config.gateway = "192.168.3.1";
   }
 
   return sim.snapshot;

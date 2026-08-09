@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Play, Code2, CheckCircle2, BarChart3, Sparkles, Rocket, Flame, Trophy } from "lucide-react";
@@ -9,6 +10,12 @@ import { CourseCard } from "@/components/marketing/course-card";
 import { BRAND_TAGLINE, CREATOR_NAME } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default async function LandingPage() {
   const session = await getSession();

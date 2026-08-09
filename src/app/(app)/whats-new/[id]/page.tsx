@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const release = await getPublishedRelease(id);
   return {
-    title: release ? `CodeSphere ${release.version} — ${release.title}` : "What's New | CodeSphere",
+    title: release ? `CreyvaPH ${release.version} — ${release.title}` : "What's New | CreyvaPH",
   };
 }
 

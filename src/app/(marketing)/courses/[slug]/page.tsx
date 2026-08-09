@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -25,9 +26,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { BRAND_NAME } from "@/lib/brand";
+import { siteUrl } from "@/lib/site-url";
 import { DIFFICULTY_LABELS, LESSON_STATUS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: PageProps<"/courses/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const course = await getCachedCourseTree(slug);
+  if (!course || course.status !== "PUBLISHED") return {};
+
+  const description = course.longDescription ?? course.description;
+  return {
+    title: course.title,
+    description,
+    alternates: {
+      canonical: `/courses/${slug}`,
+    },
+    openGraph: {
+      type: "website",
+      siteName: BRAND_NAME,
+      title: `${course.title} · CreyvaPH`,
+      description,
+      url: siteUrl(`/courses/${slug}`),
+    },
+  };
+}
 
 export default async function CourseDetailPage({ params }: PageProps<"/courses/[slug]">) {
   const { slug } = await params;

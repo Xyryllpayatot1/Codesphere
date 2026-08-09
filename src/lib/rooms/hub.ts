@@ -317,7 +317,7 @@ export class RoomSession {
   }
 }
 
-const globalRoomHub = globalThis as unknown as { __codesphereRoomHub?: RoomHub };
+const globalRoomHub = globalThis as unknown as { __creyvaphRoomHub?: RoomHub };
 
 export class RoomHub {
   private rooms = new Map<string, RoomSession>();
@@ -362,4 +362,4 @@ function emptyDoc(): SimSnapshot {
   return { version: 1, devices: [], cables: [], macTables: {}, startupConfigs: {}, wirelessLinks: [] };
 }
 
-export const roomHub: RoomHub = globalRoomHub.__codesphereRoomHub ?? (globalRoomHub.__codesphereRoomHub = new RoomHub());
+export const roomHub: RoomHub = globalRoomHub.__creyvaphRoomHub ?? (globalRoomHub.__creyvaphRoomHub = new RoomHub());

@@ -1,10 +1,11 @@
 // ---------------------------------------------------------------------------
-// CodeSphere
+// CreyvaPH
 // Educational Technology Platform
 // Created & Led by Jhon Xyryll Samoy
-// © 2026 CodeSphere
+// © 2026 CreyvaPH
 // ---------------------------------------------------------------------------
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Boxes, Bot, Medal, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,24 @@ import {
   CREATOR_ROLE,
   CREATOR_TITLES,
 } from "@/lib/brand";
+import { siteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Credits",
+  description: BRAND_DESCRIPTION,
+  alternates: {
+    canonical: "/credits",
+  },
+  openGraph: {
+    type: "website",
+    siteName: BRAND_NAME,
+    title: "Credits · CreyvaPH",
+    description: BRAND_DESCRIPTION,
+    url: siteUrl("/credits"),
+  },
+};
 
 const technology = [
   { name: "Next.js (App Router)", detail: "Web framework powering the full platform" },

@@ -1,5 +1,5 @@
 /*
- * CodeSphere
+ * CreyvaPH
  * One-off script: mark existing users as "already onboarded" so the new
  * onboarding gate only applies to accounts created after this change.
  * Idempotent — safe to re-run.

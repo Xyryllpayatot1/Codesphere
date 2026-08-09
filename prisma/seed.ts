@@ -1,11 +1,11 @@
 /*
- * CodeSphere
+ * CreyvaPH
  * Copyright © 2026 Jhon Xyryll Samoy
  * All rights reserved.
  */
 
 // ---------------------------------------------------------------------------
-// Seed data for CodeSphere. Idempotent (upserts keyed by slug/key) — safe to
+// Seed data for CreyvaPH. Idempotent (upserts keyed by slug/key) — safe to
 // re-run. Run with: npx prisma db seed  (or `tsx prisma/seed.ts`)
 //
 // Uses the generated client directly (NOT src/lib/prisma — that pulls in
@@ -44,7 +44,7 @@ async function upsertUser() {
     create: {
       email: "admin@codesphere.dev",
       username: "admin",
-      name: "CodeSphere Admin",
+      name: "CreyvaPH Admin",
       passwordHash,
       role: "ADMIN",
     },
@@ -137,7 +137,7 @@ async function upsertAchievements() {
     { key: "world-cert-1", name: "World Certified", description: "Earn your first world certificate", icon: "🏅", category: "WORLD", rarity: "EPIC", xpReward: 100, criteria: { kind: "worldCertificatesEarned", count: 1 }, order: 61 },
     { key: "world-master-1", name: "World Conqueror", description: "Master your first Programming World", icon: "🌍", category: "WORLD", rarity: "EPIC", xpReward: 120, criteria: { kind: "worldMastered", worldKey: "html" }, order: 62 },
     { key: "worlds-mastered-3", name: "Pathfinder", description: "Master three Programming Worlds", icon: "🗺️", category: "WORLD", rarity: "LEGENDARY", xpReward: 250, criteria: { kind: "worldMastered" }, order: 63, secret: true },
-    { key: "worlds-mastered-10", name: "Grandmaster of CodeSphere", description: "Master all ten Programming Worlds", icon: "🐉", category: "WORLD", rarity: "MYTHIC", xpReward: 1000, criteria: { kind: "worldMastered" }, order: 64, secret: true },
+    { key: "worlds-mastered-10", name: "Grandmaster of CreyvaPH", description: "Master all ten Programming Worlds", icon: "🐉", category: "WORLD", rarity: "MYTHIC", xpReward: 1000, criteria: { kind: "worldMastered" }, order: 64, secret: true },
   ] as const;
 
   for (const a of items) {
@@ -167,7 +167,7 @@ async function upsertProgression() {
     { key: "arch-mage", name: "Arch Mage of Code", description: "Reach level 70 and cast spells in any language.", icon: "🧙", rarity: "LEGENDARY", unlockType: "level", unlockValue: 70, order: 13 },
     { key: "code-ninja", name: "Code Ninja", description: "Reach level 80 — silent, swift, untouchable.", icon: "🥷", rarity: "LEGENDARY", unlockType: "level", unlockValue: 80, order: 14 },
     { key: "code-myth", name: "Code Myth", description: "Reach level 90. Your code is told in legends.", icon: "🐉", rarity: "MYTHIC", unlockType: "level", unlockValue: 90, order: 15 },
-    { key: "codesphere-legend", name: "CodeSphere Legend", description: "Reach level 100. The summit. The mythic peak.", icon: "👑", rarity: "MYTHIC", unlockType: "level", unlockValue: 100, order: 16 },
+    { key: "codesphere-legend", name: "CreyvaPH Legend", description: "Reach level 100. The summit. The mythic peak.", icon: "👑", rarity: "MYTHIC", unlockType: "level", unlockValue: 100, order: 16 },
     // ── XP titles ────────────────────────────────────────────────────────────
     { key: "xp-pioneer", name: "XP Pioneer", description: "Earn 5,000 lifetime XP.", icon: "🚀", rarity: "RARE", unlockType: "xp", unlockValue: 5000, order: 17 },
     { key: "xp-champion", name: "XP Champion", description: "Earn 15,000 lifetime XP.", icon: "🏅", rarity: "EPIC", unlockType: "xp", unlockValue: 15000, order: 18 },
@@ -267,7 +267,12 @@ async function upsertCatalog() {
     create: { name: "Networking", slug: "networking", description: "Design and troubleshoot real networks in a simulated lab.", icon: "🕸️", color: "#06b6d4", order: 2 },
     update: {},
   });
-  return { webDev, networking };
+  const techPro = await prisma.category.upsert({
+    where: { slug: "techpro" },
+    create: { name: "TechPro", slug: "techpro", description: "Professional infrastructure: network operating systems and beyond.", icon: "⚙️", color: "#8b5cf6", order: 3 },
+    update: {},
+  });
+  return { webDev, networking, techPro };
 }
 
 // ---------------------------------------------------------------------------
@@ -1152,13 +1157,13 @@ async function seedNetworkingCourse(categoryId: string) {
       color: "#06b6d4",
       difficulty: "BEGINNER",
       language: "networking",
-      estimatedHours: 4,
-      xpTotal: 260,
+      estimatedHours: 8,
+      xpTotal: 640,
       status: "PUBLISHED",
       isFree: true,
       order: 2,
     },
-    update: { title: "Computer Networks", description: "Design, build and troubleshoot real networks in a live simulated lab — no equipment needed.", difficulty: "BEGINNER", status: "PUBLISHED", isFree: true },
+    update: { title: "Computer Networks", description: "Design, build and troubleshoot real networks in a live simulated lab — no equipment needed.", difficulty: "BEGINNER", status: "PUBLISHED", isFree: true, estimatedHours: 8, xpTotal: 640 },
   });
 
   const m1 = await prisma.module.upsert({
@@ -1233,7 +1238,1800 @@ async function seedNetworkingCourse(categoryId: string) {
     ]),
   });
 
-  return { course, modules: [m1, m2], lessons: [lesson1, lesson2] };
+  // -------------------------------------------------------------------------
+  // Module 3 — IP Addressing & Subnetting
+  // -------------------------------------------------------------------------
+
+  const m3 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "ip-addressing" } },
+    create: { courseId: course.id, title: "IP Addressing & Subnetting", slug: "ip-addressing", description: "IPv4 addresses, subnet masks and how networks are carved up.", order: 3, estimatedMinutes: 55 },
+    update: { title: "IP Addressing & Subnetting", order: 3, estimatedMinutes: 55 },
+  });
+
+  const lesson3 = await upsertLesson(m3.id, course.id, {
+    slug: "ipv4-addresses",
+    title: "IPv4 addresses and subnet masks",
+    description: "Read an IPv4 address, understand octets and masks, and spot private ranges.",
+    objectives: [
+      "Explain the four-octet structure of an IPv4 address",
+      "Read a subnet mask as CIDR (/24)",
+      "Identify private vs public ranges",
+    ],
+    difficulty: "BEGINNER",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("Every device on a network needs a unique **IP address** so packets can find it. An IPv4 address is a 32-bit number, written as four decimal numbers — **octets** — separated by dots. Each octet runs from `0` to `255`."),
+      { type: "code", language: "text", code: "192.168.1.10\n172.16.0.1\n10.0.0.5", title: "Three valid IPv4 addresses" },
+      ...p("An address has two parts: the **network** part (which network you're on) and the **host** part (which device on that network). The **subnet mask** marks where the split happens."),
+      { type: "heading", level: 2, text: "Subnet masks" },
+      ...p("A mask like `255.255.255.0` means the first three octets identify the network and the last octet identifies the host. Masks are also written in **CIDR** notation — `/24` means 24 bits belong to the network part."),
+      { type: "table", headers: ["Mask", "CIDR", "Network bits", "Host bits", "Usable hosts"], rows: [
+        ["255.0.0.0", "/8", "8", "24", "16,777,214"],
+        ["255.255.0.0", "/16", "16", "16", "65,534"],
+        ["255.255.255.0", "/24", "24", "8", "254"],
+        ["255.255.255.252", "/30", "30", "2", "2"],
+      ] },
+      { type: "callout", variant: "info", title: "Two addresses are always reserved", text: "The all-zero host address is the **network address** and the all-ones address is the **broadcast address**. That's why usable hosts = 2^(host bits) − 2." },
+      { type: "heading", level: 2, text: "Private vs public" },
+      ...p("Some ranges are **private** — anyone can use them inside their own network, but they are not routed on the public internet. Your home router lives on these."),
+      { type: "list", ordered: false, items: ["`10.0.0.0/8` — big internal networks", "`172.16.0.0/12` — larger sites", "`192.168.0.0/16` — the classic home range"] },
+      { type: "exercise", exerciseKey: "ex-nos-mask-prefix", title: "Masks ↔ CIDR" },
+      { type: "quiz", quizKey: "qz-nos-ipv4", title: "IPv4 quick check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson3.id, {
+    key: "ex-nos-mask-prefix",
+    type: "fill_blank",
+    title: "Masks ↔ CIDR",
+    instructions: "Convert each subnet mask to its CIDR prefix.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "255.255.255.0 is /____\n255.255.0.0 is /____\n255.0.0.0 is /____\n255.255.255.252 is /____",
+      blanks: ["24", "16", "8", "30"],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson3.id, course.id, {
+    key: "qz-nos-ipv4",
+    title: "IPv4 quick check",
+    description: "Lock in octets, masks and private ranges.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which of these is a valid IPv4 address?", options: ["192.168.1.256", "192.168.1.10", "192.168.1", "256.0.0.1"], answer: 1, points: 10, order: 1, explanation: "Each octet must stay between 0 and 255." },
+      { type: "multiple_choice", prompt: "The subnet mask 255.255.255.0 equals which CIDR prefix?", options: ["/8", "/16", "/24", "/30"], answer: 2, points: 10, order: 2, explanation: "Three octets of 1s = 24 network bits = /24." },
+      { type: "true_false", prompt: "A /24 network has 254 usable host addresses.", answer: true, points: 10, order: 3, explanation: "256 addresses minus the network and broadcast addresses." },
+      { type: "multiple_choice", prompt: "Which address range is PRIVATE?", options: ["8.8.8.0/8", "192.168.0.0/16", "203.0.113.0/24", "1.1.1.0/8"], answer: 1, points: 10, order: 4, explanation: "192.168.0.0/16 is a private range used inside networks." },
+      { type: "true_false", prompt: "A broadcast address sends data to every host in the network.", answer: true, points: 10, order: 5, explanation: "The all-ones host address targets every host on the subnet." },
+    ],
+  });
+
+  const lesson4 = await upsertLesson(m3.id, course.id, {
+    slug: "subnetting-basics",
+    title: "Subnetting in practice",
+    description: "Split a network into smaller subnets and compute usable hosts.",
+    objectives: [
+      "Explain what subnetting achieves",
+      "Compute usable hosts for a given prefix",
+      "Describe a /30 point-to-point link",
+    ],
+    difficulty: "BEGINNER",
+    estimatedMinutes: 14,
+    order: 2,
+    content: block([
+      ...p("Subnetting splits one big network into smaller, more manageable pieces. Each subnet gets its own **network** and **broadcast** address, so addresses are used where they're needed and broadcast domains stay small."),
+      ...p("The math is simple: with `h` host bits you get `2^h − 2` usable hosts — the `− 2` reserves the network and broadcast addresses."),
+      { type: "visual", title: "From bits to usable hosts", nodes: [
+        { id: "bits", label: "32 bits in an IPv4 address", detail: "The address is one 32-bit number", tone: "muted" },
+        { id: "net", label: "Network bits", detail: "/24 means 24 bits describe the network", tone: "primary" },
+        { id: "host", label: "Host bits (h = 8)", detail: "Remaining bits describe the device", tone: "success" },
+        { id: "usable", label: "Usable hosts = 2^h − 2", detail: "2^8 − 2 = 254 addresses", tone: "success" },
+      ], edges: [
+        { from: "bits", to: "net", label: "split" },
+        { from: "net", to: "host", label: "rest" },
+        { from: "host", to: "usable", label: "compute" },
+      ] },
+      { type: "heading", level: 2, text: "Common subnets" },
+      { type: "table", headers: ["Prefix", "Mask", "Host bits", "Usable hosts"], rows: [
+        ["/24", "255.255.255.0", "8", "254"],
+        ["/25", "255.255.255.128", "7", "126"],
+        ["/26", "255.255.255.192", "6", "62"],
+        ["/27", "255.255.255.224", "5", "30"],
+        ["/30", "255.255.255.252", "2", "2"],
+      ] },
+      { type: "callout", variant: "tip", title: "/30 for links", text: "A /30 has exactly 2 usable hosts — just enough for the two ends of a point-to-point link, like the serial connection between two routers." },
+      { type: "guided", title: "Practice the math", steps: [
+        { instruction: "How many usable hosts does a /25 subnet give you?", explain: "7 host bits → 2^7 − 2 = 126 usable addresses.", check: "Did you subtract the network and broadcast addresses?" },
+        { instruction: "Why can't a /31 be used for real devices?", explain: "2^1 − 2 = 0 — it leaves no usable host addresses at all.", check: "A /31 has 1 host bit, which yields zero usable addresses." },
+      ] },
+      { type: "exercise", exerciseKey: "ex-nos-subnet-hosts", title: "Count the hosts" },
+      { type: "quiz", quizKey: "qz-nos-subnetting", title: "Subnetting check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson4.id, {
+    key: "ex-nos-subnet-hosts",
+    type: "fill_blank",
+    title: "Count the hosts",
+    instructions: "Fill in the number of usable hosts for each subnet.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "A /24 network has ____ usable hosts.\nA /25 network has ____ usable hosts.\nA /26 network has ____ usable hosts.\nA /30 network has ____ usable hosts.",
+      blanks: ["254", "126", "62", "2"],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson4.id, course.id, {
+    key: "qz-nos-subnetting",
+    title: "Subnetting check",
+    description: "Test your subnet math.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "A /26 subnet has how many usable hosts?", options: ["30", "62", "126", "254"], answer: 1, points: 10, order: 1, explanation: "6 host bits → 2^6 − 2 = 62." },
+      { type: "multiple_choice", prompt: "The broadcast address of 192.168.1.0/24 is:", options: ["192.168.1.1", "192.168.1.255", "192.168.1.0", "255.255.255.255"], answer: 1, points: 10, order: 2, explanation: "All host bits set to 1 → 192.168.1.255." },
+      { type: "true_false", prompt: "Subnetting reduces the number of wasted addresses.", answer: true, points: 10, order: 3, explanation: "Smaller subnets mean addresses are allocated only where needed." },
+      { type: "multiple_choice", prompt: "Which subnet mask allows exactly 2 usable hosts?", options: ["255.255.255.0", "255.255.255.192", "255.255.255.252", "255.255.255.224"], answer: 2, points: 10, order: 4, explanation: "/30 has 2 host bits → 2 usable addresses." },
+      { type: "multiple_choice", prompt: "Splitting 192.168.1.0/24 into four equal parts gives:", options: ["Four /25 subnets", "Four /26 subnets", "Four /27 subnets", "Four /28 subnets"], answer: 1, points: 10, order: 5, explanation: "Two extra network bits → /26, which yields four subnets." },
+    ],
+  });
+
+  // -------------------------------------------------------------------------
+  // Module 4 — Routing Between Networks
+  // -------------------------------------------------------------------------
+
+  const m4 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "routing" } },
+    create: { courseId: course.id, title: "Routing Between Networks", slug: "routing", description: "How routers connect LANs and how static routes are configured.", order: 4, estimatedMinutes: 60 },
+    update: { title: "Routing Between Networks", order: 4, estimatedMinutes: 60 },
+  });
+
+  const lesson5 = await upsertLesson(m4.id, course.id, {
+    slug: "why-routers",
+    title: "Why we need routers",
+    description: "Switches keep one LAN running; routers connect many LANs.",
+    objectives: [
+      "Explain why a switch alone cannot route between networks",
+      "Describe the role of a default gateway",
+      "Read the basic rows of a routing table",
+    ],
+    difficulty: "BEGINNER",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("Switches connect devices **within** a network, but they can't move traffic **between** networks. That's the router's job: it reads the destination IP, consults its **routing table**, and forwards the packet toward the next hop."),
+      { type: "visual", title: "Two LANs, one router", nodes: [
+        { id: "lan1", label: "LAN A — 192.168.1.0/24", detail: "PC1 · gateway 192.168.1.1", tone: "primary" },
+        { id: "rtr", label: "Router R1", detail: "One interface on each network", tone: "success" },
+        { id: "lan2", label: "LAN B — 192.168.2.0/24", detail: "PC2 · gateway 192.168.2.1", tone: "primary" },
+      ], edges: [
+        { from: "lan1", to: "rtr", label: "Gi0/0" },
+        { from: "rtr", to: "lan2", label: "Gi0/1" },
+      ] },
+      { type: "heading", level: 2, text: "The default gateway" },
+      ...p("A host only knows its own subnet. When PC1 wants to reach PC2 on a different subnet, it sends the packet to its **default gateway** — the router's IP on the same subnet — and the router forwards it onward."),
+      { type: "heading", level: 2, text: "Reading a routing table" },
+      { type: "code", language: "text", code: `R1# show ip route
+     192.168.1.0/24  [connected]  via GigabitEthernet0/0
+     192.168.2.0/24  [static]     via 10.0.0.2`, title: "A routing table on R1" },
+      { type: "netlab", title: "Explore a routed network", template: "two-router" },
+      { type: "checkpoint", title: "Checkpoint", items: ["I know why switches alone can't route", "I can explain what a default gateway does", "I can read the basic rows of a routing table"] },
+      { type: "quiz", quizKey: "qz-nos-routing", title: "Routing fundamentals" },
+    ]),
+  });
+
+  await upsertQuiz(lesson5.id, course.id, {
+    key: "qz-nos-routing",
+    title: "Routing fundamentals",
+    description: "Check your understanding of routers and gateways.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which device forwards packets between different networks?", options: ["Switch", "Router", "Hub", "Repeater"], answer: 1, points: 10, order: 1, explanation: "Routers move traffic between networks; switches move frames within one." },
+      { type: "multiple_choice", prompt: "The default gateway is:", options: ["The router's IP on your subnet", "Your own IP address", "The DNS server", "The broadcast address"], answer: 0, points: 10, order: 2, explanation: "Hosts send off-subnet traffic to their gateway." },
+      { type: "true_false", prompt: "A static route is configured by an administrator by hand.", answer: true, points: 10, order: 3, explanation: "Static routes are manually entered with the 'ip route' command." },
+      { type: "multiple_choice", prompt: "In 'ip route 192.168.2.0 255.255.255.0 10.0.0.2', what is 10.0.0.2?", options: ["The destination network", "The next-hop router", "The source network", "The broadcast address"], answer: 1, points: 10, order: 4, explanation: "10.0.0.2 is the next hop the packet is handed to." },
+      { type: "true_false", prompt: "Two devices on different subnets can communicate without a router.", answer: false, points: 10, order: 5, explanation: "Different subnets require a router to forward between them." },
+    ],
+  });
+
+  const lesson6 = await upsertLesson(m4.id, course.id, {
+    slug: "static-routes",
+    title: "Configure static routes",
+    description: "Type real IOS commands to route traffic between two LANs.",
+    objectives: [
+      "Explain the 'ip route' syntax",
+      "Configure router interfaces with IP addresses",
+      "Add static routes on two routers so their LANs can ping each other",
+    ],
+    difficulty: "INTERMEDIATE",
+    estimatedMinutes: 15,
+    order: 2,
+    content: block([
+      ...p("A **static route** tells a router where to send packets for a network it isn't directly connected to. The command is `ip route <destination network> <mask> <next-hop>`."),
+      { type: "code", language: "text", code: `R1(config)# ip route 192.168.2.0 255.255.255.0 10.0.0.2
+R2(config)# ip route 192.168.1.0 255.255.255.0 10.0.0.1`, title: "Routes so each router can reach the other's LAN" },
+      { type: "breakdown", title: "Anatomy of a static route", language: "text", steps: [
+        { code: "ip route", explain: "Enter a static route in global configuration mode.", why: "Tells the router a network exists beyond its own interfaces." },
+        { code: "192.168.2.0", explain: "The destination network address.", why: "Which network this route leads to." },
+        { code: "255.255.255.0", explain: "The destination's subnet mask.", why: "Defines how big that network is." },
+        { code: "10.0.0.2", explain: "The next-hop router to forward to.", why: "The neighbor that knows how to reach that network." },
+      ] },
+      { type: "guided", title: "Hands-on on R1", steps: [
+        { instruction: "Open R1's console and run 'enable', then 'configure terminal'.", explain: "You need privileged exec mode before you can configure.", check: "Your prompt should read R1(config)#." },
+        { instruction: "Enter 'interface GigabitEthernet0/0' and set 'ip address 192.168.1.1 255.255.255.0'.", explain: "Configure the LAN-facing interface of R1.", check: "Use 'no shutdown' if the interface shows administratively down." },
+        { instruction: "Add 'ip route 192.168.2.0 255.255.255.0 10.0.0.2'. Repeat on R2 for 192.168.1.0 via 10.0.0.1.", explain: "Each router needs a route to the other's LAN.", check: "Verify with 'show ip route' on both routers." },
+      ] },
+      { type: "netlab", title: "Hands-on: Route between two networks", template: "two-router", missionSlug: "routing-across-networks" },
+      { type: "exercise", exerciseKey: "ex-nos-route-order", title: "Order the configuration" },
+      { type: "exercise", exerciseKey: "ex-nos-static-route", title: "Complete the route" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson6.id, {
+    key: "ex-nos-route-order",
+    type: "ordering",
+    title: "Order the configuration",
+    instructions: "Arrange these steps in the order you would type them to configure R1.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: [
+        "ip route 192.168.2.0 255.255.255.0 10.0.0.2",
+        "configure terminal",
+        "interface GigabitEthernet0/0",
+        "enable",
+        "ip address 192.168.1.1 255.255.255.0",
+        "exit",
+      ],
+      answer: [3, 1, 2, 4, 5, 0],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertExercise(course.id, lesson6.id, {
+    key: "ex-nos-static-route",
+    type: "fill_blank",
+    title: "Complete the route",
+    instructions: "Fill in the static route from R1 to the 192.168.2.0/24 network via next-hop 10.0.0.2.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "R1(config)# ip route ____ 255.255.255.0 ____",
+      blanks: ["192.168.2.0", "10.0.0.2"],
+    },
+    points: 10,
+    order: 2,
+  });
+
+  // -------------------------------------------------------------------------
+  // Module 5 — Switching & VLANs
+  // -------------------------------------------------------------------------
+
+  const m5 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "switching-vlans" } },
+    create: { courseId: course.id, title: "Switching & VLANs", slug: "switching-vlans", description: "MAC learning, forwarding and isolating traffic with VLANs.", order: 5, estimatedMinutes: 60 },
+    update: { title: "Switching & VLANs", order: 5, estimatedMinutes: 60 },
+  });
+
+  const lesson7 = await upsertLesson(m5.id, course.id, {
+    slug: "how-switches-forward",
+    title: "How switches forward frames",
+    description: "MAC learning, flooding and the forwarding table.",
+    objectives: [
+      "Describe how a switch learns MAC addresses",
+      "Explain when a switch floods a frame",
+      "Compare a switch with a hub",
+    ],
+    difficulty: "BEGINNER",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("A switch forwards **frames** (layer-2 data). When it doesn't know a destination, it **floods** the frame to every port; once it learns the MAC address, it forwards only to the right port. The learned mapping lives in the **MAC address table**."),
+      { type: "visual", title: "How a switch learns", nodes: [
+        { id: "a", label: "PC1 sends a frame to PC2", detail: "Source MAC: PC1 · Destination MAC: PC2", tone: "primary" },
+        { id: "b", label: "Switch doesn't know PC2", detail: "Floods the frame to every port", tone: "warning" },
+        { id: "c", label: "Switch records PC1's port", detail: "MAC table: PC1 → port 1", tone: "success" },
+        { id: "d", label: "PC2 replies", detail: "Switch knows both, forwards only where needed", tone: "success" },
+      ], edges: [
+        { from: "a", to: "b", label: "unknown" },
+        { from: "b", to: "c", label: "learn" },
+        { from: "c", to: "d", label: "known" },
+      ] },
+      { type: "heading", level: 2, text: "Why this matters" },
+      ...p("Switches keep traffic off wires where it isn't needed — faster and more private than a hub, which repeats every frame everywhere. Inspect a real table in the lab with `show mac address-table`."),
+      { type: "netlab", title: "Watch a MAC table learn", template: "small-lan" },
+      { type: "quiz", quizKey: "qz-nos-switching", title: "Switching check" },
+    ]),
+  });
+
+  await upsertQuiz(lesson7.id, course.id, {
+    key: "qz-nos-switching",
+    title: "Switching check",
+    description: "Confirm the layer-2 fundamentals.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "A switch forwards data in units called:", options: ["Packets", "Frames", "Datagrams", "Segments"], answer: 1, points: 10, order: 1, explanation: "Switches work at layer 2 with frames." },
+      { type: "multiple_choice", prompt: "When a switch receives a frame for an unknown MAC, it:", options: ["Drops it", "Floods every port", "Returns it to the sender", "Queues it for later"], answer: 1, points: 10, order: 2, explanation: "Unknown destinations are flooded until the switch learns them." },
+      { type: "true_false", prompt: "A hub is more efficient than a switch.", answer: false, points: 10, order: 3, explanation: "Hubs repeat frames everywhere; switches forward selectively." },
+      { type: "multiple_choice", prompt: "The MAC address table maps:", options: ["IP → MAC", "MAC → port", "Port → IP", "MAC → IP"], answer: 1, points: 10, order: 4, explanation: "It records which port each MAC address was seen on." },
+    ],
+  });
+
+  const lesson8 = await upsertLesson(m5.id, course.id, {
+    slug: "vlans-basics",
+    title: "VLANs: virtual LANs",
+    description: "Isolate traffic on one switch with access ports and VLANs.",
+    objectives: [
+      "Explain what a VLAN is and why it helps",
+      "Create a VLAN on a switch",
+      "Assign switch ports to an access VLAN",
+    ],
+    difficulty: "INTERMEDIATE",
+    estimatedMinutes: 14,
+    order: 2,
+    content: block([
+      ...p("A **VLAN** is a virtual LAN carved out of one physical switch. Devices in different VLANs behave as if they're on separate networks — even though they share the same switch — which isolates broadcast traffic and improves security."),
+      { type: "visual", title: "One switch, two VLANs", nodes: [
+        { id: "v10", label: "VLAN 10 — Engineering", detail: "PC1 · PC2 (ports 1–2)", tone: "primary" },
+        { id: "sw", label: "SW1", detail: "A single physical switch", tone: "muted" },
+        { id: "v20", label: "VLAN 20 — Sales", detail: "PC3 (port 3)", tone: "warning" },
+      ], edges: [
+        { from: "v10", to: "sw", label: "access" },
+        { from: "v20", to: "sw", label: "access" },
+      ] },
+      { type: "heading", level: 2, text: "Access ports" },
+      ...p("Each PC plugs into a switch port. You place that port into a VLAN with `switchport access vlan <id>`. Frames on that port stay inside their VLAN and never cross into another."),
+      { type: "code", language: "text", code: `SW1# configure terminal
+SW1(config)# vlan 10
+SW1(config-vlan)# exit
+SW1(config)# interface FastEthernet0/1
+SW1(config-if)# switchport access vlan 10`, title: "Create VLAN 10 and assign a port" },
+      { type: "guided", title: "Isolate two PCs", steps: [
+        { instruction: "Open SW1's console: 'enable', then 'configure terminal', then 'vlan 10'.", explain: "Create the VLAN that will hold PC1 and PC2.", check: "Your prompt should read SW1(config-vlan)#." },
+        { instruction: "Enter each PC-facing port and run 'switchport access vlan 10'.", explain: "In the small-lan template, PC1 and PC2 are wired to FastEthernet0/0 and FastEthernet0/1.", check: "Verify with 'show vlan brief' — both ports should list VLAN 10." },
+      ] },
+      { type: "netlab", title: "Hands-on: VLAN isolation", template: "small-lan", missionSlug: "vlan-isolation" },
+      { type: "exercise", exerciseKey: "ex-nos-vlan-cmd", title: "Complete the VLAN commands" },
+      { type: "quiz", quizKey: "qz-nos-vlans", title: "VLAN check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson8.id, {
+    key: "ex-nos-vlan-cmd",
+    type: "fill_blank",
+    title: "Complete the VLAN commands",
+    instructions: "Fill in the blanks to create VLAN 10 and assign port FastEthernet0/1 to it.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "SW1(config)# vlan ____\nSW1(config)# interface FastEthernet0/1\nSW1(config-if)# switchport access ____ ____",
+      blanks: ["10", "vlan", "10"],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson8.id, course.id, {
+    key: "qz-nos-vlans",
+    title: "VLAN check",
+    description: "Confirm you can work with VLANs.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "A VLAN is:", options: ["A physical network segment", "A logical partition of a switch", "A type of cable", "A routing protocol"], answer: 1, points: 10, order: 1, explanation: "VLANs virtually split one switch into separate LANs." },
+      { type: "true_false", prompt: "Devices in different VLANs can communicate directly through the switch.", answer: false, points: 10, order: 2, explanation: "Different VLANs are separate broadcast domains; a router is needed between them." },
+      { type: "multiple_choice", prompt: "Which command assigns a switch port to VLAN 10?", options: ["ip route 10 255.255.255.0", "switchport access vlan 10", "vlan 10 port", "port vlan 10"], answer: 1, points: 10, order: 3, explanation: "'switchport access vlan 10' sets the port's VLAN." },
+      { type: "true_false", prompt: "VLANs reduce broadcast traffic.", answer: true, points: 10, order: 4, explanation: "Broadcasts stay inside their own VLAN." },
+      { type: "multiple_choice", prompt: "VLAN 1 on a fresh switch is the:", options: ["Default VLAN", "Management VLAN", "Trunk VLAN", "Private VLAN"], answer: 0, points: 10, order: 5, explanation: "VLAN 1 is the default all ports start in." },
+    ],
+  });
+
+  // -------------------------------------------------------------------------
+  // Module 6 — Network Services
+  // -------------------------------------------------------------------------
+
+  const m6 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "network-services" } },
+    create: { courseId: course.id, title: "Network Services", slug: "network-services", description: "DHCP hands out addresses; DNS turns names into addresses.", order: 6, estimatedMinutes: 55 },
+    update: { title: "Network Services", order: 6, estimatedMinutes: 55 },
+  });
+
+  const lesson9 = await upsertLesson(m6.id, course.id, {
+    slug: "dhcp-explained",
+    title: "DHCP: automatic addressing",
+    description: "Let a server hand out IP addresses with the DORA process.",
+    objectives: [
+      "Explain what DHCP does",
+      "Describe the DORA process",
+      "Obtain an address from a DHCP server in the lab",
+    ],
+    difficulty: "BEGINNER",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("**DHCP (Dynamic Host Configuration Protocol)** hands out IP addresses automatically. Instead of typing IPs by hand, a host asks the DHCP server and receives an address — plus mask, gateway and DNS — for a limited **lease**."),
+      { type: "visual", title: "The DHCP process — DORA", nodes: [
+        { id: "discover", label: "Discover", detail: "Client broadcasts: who can give me an IP?", tone: "primary" },
+        { id: "offer", label: "Offer", detail: "Server replies with a candidate address", tone: "success" },
+        { id: "request", label: "Request", detail: "Client asks for that specific address", tone: "primary" },
+        { id: "ack", label: "Acknowledge", detail: "Server confirms; the lease is active", tone: "success" },
+      ], edges: [
+        { from: "discover", to: "offer", label: "broadcast" },
+        { from: "offer", to: "request", label: "choose" },
+        { from: "request", to: "ack", label: "confirm" },
+      ] },
+      { type: "heading", level: 2, text: "Hands-on" },
+      ...p("In the lab, open a PC and set its IP mode to **DHCP**, then press **Renew** — or run `ipconfig /renew` in the terminal. The server's pool (192.168.1.50–100) hands it an address."),
+      { type: "netlab", title: "Hands-on: DHCP", template: "small-lan", missionSlug: "dhcp-automation" },
+      { type: "quiz", quizKey: "qz-nos-dhcp", title: "DHCP check" },
+    ]),
+  });
+
+  await upsertQuiz(lesson9.id, course.id, {
+    key: "qz-nos-dhcp",
+    title: "DHCP check",
+    description: "Make sure DHCP is locked in.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "DHCP stands for:", options: ["Dynamic Host Configuration Protocol", "Digital Host Control Protocol", "Domain Host Configuration Process", "Dynamic Handshake Control Protocol"], answer: 0, points: 10, order: 1, explanation: "DHCP = Dynamic Host Configuration Protocol." },
+      { type: "multiple_choice", prompt: "Which step happens FIRST in DHCP?", options: ["Offer", "Discover", "Request", "Acknowledge"], answer: 1, points: 10, order: 2, explanation: "The client broadcasts a Discover before anything else." },
+      { type: "true_false", prompt: "A DHCP lease lasts forever by default.", answer: false, points: 10, order: 3, explanation: "Leases are temporary and renew before expiring." },
+      { type: "multiple_choice", prompt: "Which command requests a fresh address on a PC?", options: ["ipconfig /release", "ipconfig /renew", "ipconfig /all", "nslookup"], answer: 1, points: 10, order: 4, explanation: "'/renew' requests a new lease from the DHCP server." },
+      { type: "true_false", prompt: "DHCP can also hand out the default gateway and DNS server.", answer: true, points: 10, order: 5, explanation: "The lease includes mask, gateway and DNS along with the IP." },
+    ],
+  });
+
+  const lesson10 = await upsertLesson(m6.id, course.id, {
+    slug: "dns-explained",
+    title: "DNS: names to addresses",
+    description: "Resolve hostnames like server.netlab into IP addresses.",
+    objectives: [
+      "Explain why DNS exists",
+      "Use nslookup to resolve a hostname",
+      "Describe how a DNS record works",
+    ],
+    difficulty: "BEGINNER",
+    estimatedMinutes: 12,
+    order: 2,
+    content: block([
+      ...p("You'd never remember every server's IP address. **DNS (Domain Name System)** translates human-friendly names like `server.netlab` into IP addresses. When you run `nslookup server.netlab`, your host asks the configured DNS server for the answer."),
+      { type: "visual", title: "How a name becomes an IP", nodes: [
+        { id: "client", label: "You type a hostname", detail: "server.netlab", tone: "primary" },
+        { id: "query", label: "DNS query", detail: "What is the IP of server.netlab?", tone: "primary" },
+        { id: "server", label: "DNS server", detail: "Looks up its records", tone: "success" },
+        { id: "answer", label: "Answer", detail: "server.netlab → 192.168.1.10", tone: "success" },
+      ], edges: [
+        { from: "client", to: "query", label: "ask" },
+        { from: "query", to: "server", label: "forward" },
+        { from: "server", to: "answer", label: "reply" },
+      ] },
+      { type: "heading", level: 2, text: "Hands-on" },
+      ...p("The small-lan template includes a server (SRV1 at 192.168.1.10) with a DNS record for `server.netlab`. Renew your PC's address, then run `nslookup server.netlab` in the terminal."),
+      { type: "netlab", title: "Resolve a name", template: "small-lan" },
+      { type: "exercise", exerciseKey: "ex-nos-dns", title: "How DNS works" },
+      { type: "quiz", quizKey: "qz-nos-dns", title: "DNS check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson10.id, {
+    key: "ex-nos-dns",
+    type: "ordering",
+    title: "How DNS works",
+    instructions: "Arrange these events in the order they happen during a DNS lookup.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: [
+        "The DNS server looks up its records",
+        "You type nslookup server.netlab",
+        "The server replies with 192.168.1.10",
+        "The client sends a DNS query",
+        "The client opens a connection to the address",
+      ],
+      answer: [1, 3, 0, 2, 4],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson10.id, course.id, {
+    key: "qz-nos-dns",
+    title: "DNS check",
+    description: "Confirm you understand name resolution.",
+    passScore: 70,
+    timeLimit: 5,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "DNS translates:", options: ["IP addresses into MAC addresses", "Hostnames into IP addresses", "Frames into packets", "Ports into services"], answer: 1, points: 10, order: 1, explanation: "DNS maps names like server.netlab to IP addresses." },
+      { type: "multiple_choice", prompt: "Which command checks a hostname's address on a PC?", options: ["ipconfig /all", "ping -a", "nslookup", "arp -a"], answer: 2, points: 10, order: 2, explanation: "'nslookup' queries the configured DNS server." },
+      { type: "true_false", prompt: "DNS records are stored in a distributed database across many servers.", answer: true, points: 10, order: 3, explanation: "No single server holds the whole internet's names." },
+      { type: "multiple_choice", prompt: "In the lab, server.netlab points to:", options: ["192.168.1.1", "192.168.1.10", "10.0.0.1", "203.0.113.2"], answer: 1, points: 10, order: 4, explanation: "SRV1's record maps server.netlab to 192.168.1.10." },
+    ],
+  });
+
+  return { course, modules: [m1, m2, m3, m4, m5, m6], lessons: [lesson1, lesson2, lesson3, lesson4, lesson5, lesson6, lesson7, lesson8, lesson9, lesson10] };
+}
+
+// ---------------------------------------------------------------------------
+// Course: Network Operating Systems (NOS)
+// ---------------------------------------------------------------------------
+
+async function seedNosCourse(categoryId: string) {
+  const course = await prisma.course.upsert({
+    where: { slug: "network-operating-systems" },
+    create: {
+      title: "Network Operating Systems",
+      slug: "network-operating-systems",
+      description: "Master the software that runs switches and routers: CLI, configuration, verification, security and troubleshooting.",
+      longDescription:
+        "A network operating system is the software brain inside every switch and router. In this advanced course you'll boot devices, navigate the CLI, configure and save interfaces, build VLANs, route between sites, and troubleshoot a broken network — all hands-on inside the simulated CLI.",
+      categoryId,
+      icon: "⚙️",
+      color: "#8b5cf6",
+      difficulty: "ADVANCED",
+      language: "networking",
+      estimatedHours: 18,
+      xpTotal: 480,
+      status: "PUBLISHED",
+      isFree: true,
+      order: 3,
+    },
+    update: { title: "Network Operating Systems", description: "Master the software that runs switches and routers: CLI, configuration, verification, security and troubleshooting.", difficulty: "ADVANCED", status: "PUBLISHED", isFree: true, estimatedHours: 18, xpTotal: 480 },
+  });
+
+  // ── Module 1 — What a NOS is ──────────────────────────────────────────────
+  const m1 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-fundamentals" } },
+    create: { courseId: course.id, title: "Network Operating Systems", slug: "nos-fundamentals", description: "What a NOS is and the jobs it does on every device.", order: 1, estimatedMinutes: 55 },
+    update: { title: "Network Operating Systems", order: 1, estimatedMinutes: 55 },
+  });
+
+  const lesson1 = await upsertLesson(m1.id, course.id, {
+    slug: "what-is-a-nos",
+    title: "What is a Network Operating System?",
+    description: "Understand the software that runs inside every switch and router.",
+    objectives: [
+      "Define a network operating system and where it runs",
+      "List the core services a NOS provides",
+      "Distinguish a NOS from a desktop operating system",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("A **network operating system (NOS)** is the software that manages the hardware of a network device — a switch, router, firewall or access point — and provides the tools to configure, monitor and troubleshoot it. When you type a command at a device's console, you are talking to its NOS."),
+      { type: "heading", level: 2, text: "A NOS vs. a desktop OS" },
+      ...p("A desktop operating system is built to run applications and manage a person's computer. A network operating system is built for one narrow but demanding job: moving data through the device as fast and as correctly as possible."),
+      { type: "table", headers: ["", "Desktop OS", "Network OS"], rows: [
+        ["Typical home", "One person, one computer", "Data centers and wiring closets"],
+        ["Main job", "Run applications for a user", "Forward traffic and provide network services"],
+        ["Interface", "Desktop, windows, apps", "Command-line interface (CLI) — plus web/API"],
+        ["Examples", "Windows, macOS, Linux", "IOS-style NOSes, switch/router firmware"],
+      ] },
+      { type: "analogy", topic: "A NOS is to a network device", real: "an operating system is to a laptop", mapping: [
+        { real: "Kernel manages CPU and memory", concept: "NOS manages ports, tables and buffers" },
+        { real: "Files and folders on disk", concept: "Configuration stored in memory/flash" },
+        { real: "Apps you install", concept: "Services like routing, switching, DHCP, monitoring" },
+        { real: "Settings app", concept: "The CLI you use to configure the device" },
+      ] },
+      { type: "heading", level: 2, text: "The core jobs" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "**Interface management** — bringing ports up and down, assigning IP addresses.",
+          "**Data-plane forwarding** — deciding where each frame or packet goes, in real time.",
+          "**Control-plane services** — building routing tables, VLANs, ARP and MAC tables.",
+          "**Configuration** — reading the startup config, tracking the running config.",
+          "**Management** — the CLI itself, plus remote access and monitoring hooks.",
+        ],
+      },
+      ...p("Because every switch and router runs a NOS, the skills you learn here apply to real equipment. The CLI in this course's lab is a faithful simulation of that experience — same modes, same commands, same workflow."),
+      { type: "callout", variant: "info", title: "Terminology", text: "People often say 'the switch's operating system' or 'router firmware' — they mean the NOS. In this course we always control the device through its CLI." },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can define a network operating system", "I can list the core services a NOS provides", "I can tell a NOS apart from a desktop OS"] },
+      { type: "exercise", exerciseKey: "ex-nos2-nos-roles", title: "Order the layers" },
+      { type: "quiz", quizKey: "qz-nos2-intro", title: "NOS fundamentals check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson1.id, {
+    key: "ex-nos2-nos-roles",
+    type: "ordering",
+    title: "Order the layers",
+    instructions: "Arrange these layers from the one a network engineer touches directly down to the hardware underneath.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["Command-line interface (CLI)", "Configuration and control-plane services", "NOS kernel and drivers", "Device hardware (ports, CPU, memory)"],
+      answer: identity(4),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson1.id, course.id, {
+    key: "qz-nos2-intro",
+    title: "NOS fundamentals check",
+    description: "Lock in what a NOS is and what it does.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "What does a network operating system do?", options: ["Runs word processors for users", "Manages a network device's hardware and configuration", "Compiles application code", "Provides a web browser"], answer: 1, points: 10, order: 1, explanation: "A NOS runs on switches and routers to manage hardware and expose configuration tools." },
+      { type: "true_false", prompt: "A network operating system only runs on desktop computers.", answer: false, points: 10, order: 2, explanation: "NOSes run on switches, routers, firewalls and access points — not desktop PCs." },
+      { type: "multiple_choice", prompt: "Which of these is a core job of a NOS?", options: ["Managing routing tables", "Editing documents", "Playing media", "Scheduling meetings"], answer: 0, points: 10, order: 3, explanation: "Building and maintaining routing tables is a core control-plane responsibility." },
+      { type: "multiple_choice", prompt: "Which devices typically run a network operating system?", options: ["Switches and routers", "Smartphones", "Smart TVs", "Printers"], answer: 0, points: 10, order: 4, explanation: "Infrastructure devices — switches, routers, firewalls — run NOSes." },
+      { type: "true_false", prompt: "The CLI is one of the ways a network engineer interacts with a NOS.", answer: true, points: 10, order: 5, explanation: "The CLI is the primary interface for configuring and monitoring network devices." },
+    ],
+  });
+
+  // ── Module 2 — Device boot ────────────────────────────────────────────────
+  const m2 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-boot" } },
+    create: { courseId: course.id, title: "Device Boot", slug: "nos-boot", description: "What happens between pressing power and the CLI prompt.", order: 2, estimatedMinutes: 55 },
+    update: { title: "Device Boot", order: 2, estimatedMinutes: 55 },
+  });
+
+  const lesson2 = await upsertLesson(m2.id, course.id, {
+    slug: "device-boot-process",
+    title: "How a network device boots",
+    description: "Trace a switch or router from power-on to the command prompt.",
+    objectives: [
+      "Describe the stages of a device boot",
+      "Explain the roles of POST, ROM bootstrap, the NOS image and the startup config",
+      "Predict what happens when the startup config is missing",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 13,
+    order: 1,
+    content: block([
+      ...p("When you plug in a switch or router, a small computer inside it wakes up and follows a fixed sequence. Understanding that sequence explains where every part of the NOS comes from — and why a fresh device boots to an empty configuration."),
+      { type: "visual", title: "The boot pipeline", nodes: [
+        { id: "power", label: "Power on", detail: "The device receives power", tone: "muted" },
+        { id: "post", label: "POST", detail: "Hardware self-test", tone: "primary" },
+        { id: "bootstrap", label: "ROM bootstrap", detail: "First code the CPU runs", tone: "primary" },
+        { id: "image", label: "Load NOS image", detail: "From flash or network", tone: "success" },
+        { id: "config", label: "Load startup config", detail: "Apply saved settings", tone: "success" },
+        { id: "ready", label: "Services up", detail: "CLI prompt appears", tone: "success" },
+      ], edges: [
+        { from: "power", to: "post", label: "runs" },
+        { from: "post", to: "bootstrap", label: "then" },
+        { from: "bootstrap", to: "image", label: "loads" },
+        { from: "image", to: "config", label: "reads" },
+        { from: "config", to: "ready", label: "starts" },
+      ] },
+      { type: "heading", level: 2, text: "Stage by stage" },
+      {
+        type: "list",
+        ordered: true,
+        items: [
+          "**Power on + POST** — the CPU runs a Power-On Self-Test that checks RAM, ports and other hardware. Failures stop the boot.",
+          "**ROM bootstrap** — tiny code in read-only memory locates the NOS image on flash (or a network server) and starts loading it.",
+          "**NOS image loads** — the operating system itself is copied from flash into RAM and launched.",
+          "**Startup config loads** — the NOS looks for a saved startup configuration and applies it.",
+          "**Services start** — interfaces come up, tables initialize, and the CLI prompt is ready.",
+        ],
+      },
+      { type: "code", language: "text", code: "Booting...\nPOST: OK\nLoading NOS image from flash...\nVerifying image...\nLoading saved startup configuration...\nSystem ready.\nSwitch>", title: "A simplified boot log" },
+      { type: "table", headers: ["Stage", "What it does", "Where it lives"], rows: [
+        ["POST", "Checks hardware is healthy", "CPU / ROM"],
+        ["ROM bootstrap", "Finds and starts the NOS image", "ROM"],
+        ["NOS image", "The operating system itself", "Flash"],
+        ["Startup config", "The saved configuration to apply", "Persistent storage"],
+      ] },
+      { type: "callout", variant: "warning", title: "Running vs. startup", text: "The config the device applies at boot is the **startup config**. Any changes you make later live in the **running config** in memory — until you save them. Lesson 7 digs into this." },
+      { type: "guided", title: "Think it through", steps: [
+        { instruction: "A brand-new switch has no startup config. What does it boot to?", explain: "A default configuration — all ports up, no IP addresses, no VLANs beyond the default.", check: "Nothing to apply is fine; the device boots with defaults." },
+        { instruction: "Where does the NOS image live, and what happens if it is missing?", explain: "The image lives in flash; without it the bootstrap cannot launch the OS and the device cannot operate.", check: "No image means no operating system to control the hardware." },
+      ] },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can name the five boot stages in order", "I know where the NOS image and startup config live", "I can predict a fresh device's default state"] },
+      { type: "exercise", exerciseKey: "ex-nos2-boot-order", title: "Order the boot stages" },
+      { type: "quiz", quizKey: "qz-nos2-boot", title: "Boot process check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson2.id, {
+    key: "ex-nos2-boot-order",
+    type: "ordering",
+    title: "Order the boot stages",
+    instructions: "Put the boot stages in the order they happen on a real device.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["Power-on and POST hardware check", "ROM bootstrap locates the NOS image", "NOS image loads from flash into RAM", "Startup config is applied", "Services start and the CLI is ready"],
+      answer: identity(5),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson2.id, course.id, {
+    key: "qz-nos2-boot",
+    title: "Boot process check",
+    description: "Lock in the stages and storage locations of a device boot.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "ordering", prompt: "Arrange the boot stages in order.", items: ["POST hardware check", "ROM bootstrap", "Load the NOS image", "Load the startup config"], answer: identity(4), points: 10, order: 1, explanation: "POST → bootstrap → NOS image → startup config." },
+      { type: "multiple_choice", prompt: "What does POST stand for, and what does it do?", options: ["Power-On Self-Test — checks the hardware", "Protocol Operation Scheduler — times packets", "Packet Output System Test — sends test frames", "Post-boot Operating System Tuning — optimizes speed"], answer: 0, points: 10, order: 2, explanation: "POST is the Power-On Self-Test that verifies hardware before the OS loads." },
+      { type: "multiple_choice", prompt: "Where does the NOS image live when the device is off?", options: ["In RAM", "In flash storage", "In the routing table", "In the running config"], answer: 1, points: 10, order: 3, explanation: "The image is stored persistently in flash and copied to RAM at boot." },
+      { type: "true_false", prompt: "A missing startup config stops a device from booting.", answer: false, points: 10, order: 4, explanation: "The device boots with a default configuration instead." },
+      { type: "multiple_choice", prompt: "Which storage holds the config the device applies at boot?", options: ["Running config (RAM)", "Startup config (persistent storage)", "The routing table", "The MAC address table"], answer: 1, points: 10, order: 5, explanation: "The startup config is stored persistently and loaded into RAM at boot." },
+    ],
+  });
+
+  // ── Module 3 — CLI architecture ───────────────────────────────────────────
+  const m3 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-cli" } },
+    create: { courseId: course.id, title: "The CLI Architecture", slug: "nos-cli", description: "EXEC modes and the prompt that tells you where you are.", order: 3, estimatedMinutes: 55 },
+    update: { title: "The CLI Architecture", order: 3, estimatedMinutes: 55 },
+  });
+
+  const lesson3 = await upsertLesson(m3.id, course.id, {
+    slug: "cli-architecture",
+    title: "The CLI: modes and prompts",
+    description: "Navigate user EXEC, privileged EXEC and configuration modes.",
+    objectives: [
+      "Navigate the EXEC mode hierarchy",
+      "Explain why the CLI is the primary admin interface",
+      "Enter and exit global and interface configuration modes",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 13,
+    order: 1,
+    content: block([
+      ...p("The CLI is the main way you control a network device. It is **mode-based**: where you are in the device determines which commands you can run. The prompt is your compass — it always tells you where you are."),
+      { type: "code", language: "text", code: "Switch>                ← user EXEC\nSwitch#                ← privileged EXEC\nSwitch(config)#        ← global configuration\nSwitch(config-if)#     ← interface configuration", title: "Four prompts, four modes" },
+      { type: "table", headers: ["Prompt", "Mode", "What you can do"], rows: [
+        ["Switch>", "User EXEC", "Limited, read-only show commands"],
+        ["Switch#", "Privileged EXEC", "Everything in user mode plus debug, reload, and configuration"],
+        ["Switch(config)#", "Global configuration", "Changes that affect the whole device"],
+        ["Switch(config-if)#", "Interface configuration", "Changes to one specific interface"],
+      ] },
+      { type: "heading", level: 2, text: "Moving between modes" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "`enable` — enter privileged EXEC (a password usually protects this).",
+          "`configure terminal` — enter global configuration mode.",
+          "`interface <name>` — enter interface configuration mode.",
+          "`exit` — go back one mode; `end` — jump straight to privileged EXEC.",
+          "`disable` — drop from privileged back to user EXEC.",
+        ],
+      },
+      { type: "visual", title: "The mode tree", nodes: [
+        { id: "user", label: "User EXEC", detail: "Switch>", tone: "muted" },
+        { id: "priv", label: "Privileged EXEC", detail: "Switch#", tone: "primary" },
+        { id: "global", label: "Global config", detail: "Switch(config)#", tone: "success" },
+        { id: "iface", label: "Interface config", detail: "Switch(config-if)#", tone: "success" },
+      ], edges: [
+        { from: "user", to: "priv", label: "enable" },
+        { from: "priv", to: "global", label: "configure terminal" },
+        { from: "global", to: "iface", label: "interface …" },
+      ] },
+      { type: "mistake", title: "Common slip", language: "text", wrong: "Switch> configure terminal", wrongWhy: "`configure terminal` is a privileged command; user EXEC rejects it.", right: "Switch> enable\nSwitch# configure terminal\nSwitch(config)#", rightWhy: "You must reach privileged EXEC before configuration commands are accepted.", fix: "Type `enable` first, then `configure terminal`." },
+      { type: "callout", variant: "tip", title: "Why CLI?", text: "CLIs are scriptable, work over low-bandwidth connections, behave identically across devices, and are what real engineers use. Master the CLI and every device in the world looks familiar." },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can read a prompt and know the mode", "I can move between all four modes", "I know why the CLI is the primary interface"] },
+      { type: "exercise", exerciseKey: "ex-nos2-cli-modes", title: "Order the session" },
+      { type: "quiz", quizKey: "qz-nos2-cli", title: "CLI modes check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson3.id, {
+    key: "ex-nos2-cli-modes",
+    type: "ordering",
+    title: "Order the session",
+    instructions: "A typical CLI session starts at the user prompt. Order these steps correctly.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["Start at user EXEC (Switch>)", "Run enable to reach privileged EXEC (Switch#)", "Run configure terminal (Switch(config)#)", "Run interface FastEthernet0/0 (Switch(config-if)#)"],
+      answer: identity(4),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson3.id, course.id, {
+    key: "qz-nos2-cli",
+    title: "CLI modes check",
+    description: "Lock in the mode hierarchy and the commands that move you around.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which EXEC mode only allows a limited set of show commands?", options: ["User EXEC", "Privileged EXEC", "Global configuration", "Interface configuration"], answer: 0, points: 10, order: 1, explanation: "User EXEC (Switch>) is the restricted starting mode." },
+      { type: "multiple_choice", prompt: "Which command moves you from user EXEC into privileged EXEC?", options: ["configure terminal", "enable", "exit", "interface"], answer: 1, points: 10, order: 2, explanation: "'enable' unlocks privileged EXEC." },
+      { type: "matching", prompt: "Match each command to what it does.", left: ["enable", "configure terminal", "interface FastEthernet0/0", "end"], right: ["Enter privileged EXEC", "Enter global configuration", "Enter interface configuration", "Return to privileged EXEC"], answer: identity(4), points: 10, order: 3, explanation: "enable → privileged; configure terminal → global; interface → per-interface; end → back to #." },
+      { type: "true_false", prompt: "Interface configuration mode is entered with the 'interface' command.", answer: true, points: 10, order: 4, explanation: "From global configuration, 'interface <name>' drops you into interface mode." },
+      { type: "multiple_choice", prompt: "What does the prompt Switch(config-if)# tell you?", options: ["You are in interface configuration mode", "You are at the user prompt", "The switch is powered off", "You are configuring the routing table"], answer: 0, points: 10, order: 5, explanation: "The (config-if) suffix means interface configuration mode." },
+    ],
+  });
+
+  // ── Module 4 — Command fundamentals ───────────────────────────────────────
+  const m4 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-commands" } },
+    create: { courseId: course.id, title: "Command Fundamentals", slug: "nos-commands", description: "Help, abbreviations, history and reading errors.", order: 4, estimatedMinutes: 55 },
+    update: { title: "Command Fundamentals", order: 4, estimatedMinutes: 55 },
+  });
+
+  const lesson4 = await upsertLesson(m4.id, course.id, {
+    slug: "cli-command-fundamentals",
+    title: "Help, abbreviations and errors",
+    description: "Use the CLI's built-in help and write correct commands the first time.",
+    objectives: [
+      "Use context-sensitive help and abbreviations",
+      "Read common CLI error messages",
+      "Use command history and the 'no' form to revert changes",
+    ],
+    difficulty: "INTERMEDIATE",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("Real engineers type fast — and the CLI was built for that. You can abbreviate commands, get help at any moment, and undo changes with the `no` form. Knowing these tricks makes you dramatically faster."),
+      { type: "heading", level: 2, text: "Context-sensitive help" },
+      ...p("Type `?` alone to see available commands for your current mode, or after part of a command to see what fits:"),
+      { type: "code", language: "text", code: "Switch# show ?\n  interfaces       Interface status and configuration\n  ip               IP information\n  running-config   Current operating configuration\n  vlan             VLAN configuration\n  version          System hardware and software information", title: "Help inside a command" },
+      { type: "heading", level: 2, text: "Abbreviations" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "The CLI accepts any **unambiguous** abbreviation: `sh ip int br` = `show ip interface brief`.",
+          "Press **Tab** to auto-complete a partial keyword.",
+          "An abbreviation is only rejected when it could match more than one command.",
+        ],
+      },
+      { type: "heading", level: 2, text: "Reading errors" },
+      { type: "table", headers: ["Error", "What it means", "Fix"], rows: [
+        ["Invalid input detected at '^' marker", "The parser did not understand a token at the caret", "Check spelling and order; press '?' for valid choices"],
+        ["Incomplete command", "You typed a valid command but left out required arguments", "Re-type with '?' to see the missing argument"],
+        ["Ambiguous command", "Your abbreviation matches several commands", "Type more characters to disambiguate"],
+      ] },
+      { type: "callout", variant: "tip", title: "Undo with 'no'", text: "Most configuration commands can be reversed by prefixing them with `no` — `no shutdown` re-enables a port, `no ip address` removes an address. Reversibility is a design principle of the CLI." },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can use '?' and Tab for help", "I can read and fix the three common errors", "I can use 'no' to reverse a change"] },
+      { type: "exercise", exerciseKey: "ex-nos2-command-help", title: "Help toolkit" },
+      { type: "quiz", quizKey: "qz-nos2-commands", title: "Command fundamentals check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson4.id, {
+    key: "ex-nos2-command-help",
+    type: "fill_blank",
+    title: "Help toolkit",
+    instructions: "Fill in the missing CLI mechanisms.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "Type ____ to see commands available in the current mode.\nPress the ____ key to auto-complete a command.\nPrefix a command with ____ to reverse it.\nThe error ____ is shown when the parser rejects a token.",
+      blanks: [["?"], ["Tab"], ["no"], ["Invalid input detected at '^' marker"]],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson4.id, course.id, {
+    key: "qz-nos2-commands",
+    title: "Command fundamentals check",
+    description: "Lock in help, abbreviations and error handling.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which abbreviation correctly runs 'show ip interface brief'?", options: ["sh ip int br", "s ip i b", "show int", "sh interface br"], answer: 0, points: 10, order: 1, explanation: "'sh ip int br' is the standard unambiguous abbreviation." },
+      { type: "fill_blank", prompt: "Type ____ to see what a command expects next, and press ____ to auto-complete a keyword.", blanks: ["?"], points: 10, order: 2, explanation: "'?' shows the next argument; Tab completes the keyword." },
+      { type: "multiple_choice", prompt: "What does 'Invalid input detected at ^ marker' mean?", options: ["The parser rejected a token at the caret position", "The device is out of memory", "The command ran but failed", "You are in the wrong mode"], answer: 0, points: 10, order: 3, explanation: "The caret marks the exact token the parser could not understand." },
+      { type: "true_false", prompt: "CLI keywords are case-sensitive.", answer: false, points: 10, order: 4, explanation: "IOS-style CLIs treat keywords case-insensitively." },
+      { type: "multiple_choice", prompt: "Which command shows the commands you recently typed?", options: ["show history", "show running-config", "show version", "show ip interface brief"], answer: 0, points: 10, order: 5, explanation: "'show history' lists recently executed commands." },
+    ],
+  });
+
+  // ── Module 5 — Configuring a device ───────────────────────────────────────
+  const m5 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-config" } },
+    create: { courseId: course.id, title: "Configuring a Device", slug: "nos-config", description: "Your first real configuration session on a switch.", order: 5, estimatedMinutes: 60 },
+    update: { title: "Configuring a Device", order: 5, estimatedMinutes: 60 },
+  });
+
+  const lesson5 = await upsertLesson(m5.id, course.id, {
+    slug: "configuring-a-device",
+    title: "Configure a management interface",
+    description: "Give a switch an IP address, bring its port up, and verify it responds.",
+    objectives: [
+      "Enter global and interface configuration modes",
+      "Assign an IP address and bring an interface up",
+      "Verify the change with show commands",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 15,
+    order: 1,
+    content: block([
+      ...p("Time to make a device do something. In this lesson you'll give a switch a **management IP address** — the address an engineer uses to reach it — and bring its port up. This is the same workflow used on real equipment."),
+      { type: "heading", level: 2, text: "The configuration workflow" },
+      {
+        type: "list",
+        ordered: true,
+        items: [
+          "Enter privileged EXEC: `enable`",
+          "Enter global configuration: `configure terminal`",
+          "Pick the interface: `interface FastEthernet0/0`",
+          "Assign the address: `ip address 192.168.1.1 255.255.255.0`",
+          "Bring it up: `no shutdown`",
+          "Exit and verify: `end` then `show ip interface brief`",
+        ],
+      },
+      { type: "code", language: "text", code: "Switch> enable\nSwitch# configure terminal\nSwitch(config)# interface FastEthernet0/0\nSwitch(config-if)# ip address 192.168.1.1 255.255.255.0\nSwitch(config-if)# no shutdown\nSwitch(config-if)# end\nSwitch# show ip interface brief", title: "A full configuration session" },
+      { type: "table", headers: ["Command", "What it does"], rows: [
+        ["ip address A.B.C.D M.M.M.M", "Sets the interface's IP and mask"],
+        ["no shutdown", "Makes the interface administratively up"],
+        ["shutdown", "Takes the interface administratively down"],
+        ["show ip interface brief", "Lists every interface with status and IP"],
+      ] },
+      { type: "callout", variant: "info", title: "Why 'no shutdown'?", text: "By default, ports on many devices start administratively **down** for safety. 'no shutdown' is how you switch one on — it is one of the most common commands in networking." },
+      { type: "mistake", title: "Easy to forget", language: "text", wrong: "Switch(config-if)# ip address 192.168.1.1 255.255.255.0\nSwitch(config-if)# end", wrongWhy: "The address is set, but the port never got 'no shutdown', so it stays down.", right: "Switch(config-if)# ip address 192.168.1.1 255.255.255.0\nSwitch(config-if)# no shutdown\nSwitch(config-if)# end", rightWhy: "'no shutdown' brings the port up so the address actually works.", fix: "Always follow ip address with no shutdown on a fresh port." },
+      ...p("In the lab, **SW1**'s management port starts down. Give it 192.168.1.1 / 255.255.255.0, bring it up, configure **PC1** with 192.168.1.10 and gateway 192.168.1.1, then ping the switch — it should answer."),
+      { type: "netlab", title: "Hands-on: management interface", template: "nos-basic", missionSlug: "nos-switch-mgmt" },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can navigate to interface configuration mode", "I set an IP and brought a port up", "I verified the change with show ip interface brief"] },
+      { type: "exercise", exerciseKey: "ex-nos2-config-flow", title: "Order the config session" },
+      { type: "quiz", quizKey: "qz-nos2-config", title: "Configuration check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson5.id, {
+    key: "ex-nos2-config-flow",
+    type: "ordering",
+    title: "Order the config session",
+    instructions: "Arrange these steps in the order they happen in a configuration session.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["enable", "configure terminal", "interface FastEthernet0/0", "ip address 192.168.1.1 255.255.255.0", "no shutdown", "end"],
+      answer: identity(6),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson5.id, course.id, {
+    key: "qz-nos2-config",
+    title: "Configuration check",
+    description: "Lock in the config workflow and the running config.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which mode must you be in to type 'interface FastEthernet0/0'?", options: ["Global configuration", "User EXEC", "Privileged EXEC only", "Any mode"], answer: 0, points: 10, order: 1, explanation: "The 'interface' command runs in global configuration mode." },
+      { type: "multiple_choice", prompt: "What does 'no shutdown' do to an interface?", options: ["Makes it administratively up", "Deletes its IP address", "Reboots the device", "Removes it from the config"], answer: 0, points: 10, order: 2, explanation: "'no shutdown' flips the port from administratively down to up." },
+      { type: "true_false", prompt: "Commands you type in configuration mode change the running config immediately.", answer: true, points: 10, order: 3, explanation: "Changes apply to the running config right away." },
+      { type: "multiple_choice", prompt: "Which command lists every interface with its status and IP?", options: ["show ip interface brief", "show version", "show history", "show running-config"], answer: 0, points: 10, order: 4, explanation: "'show ip interface brief' gives a one-line-per-interface summary." },
+      { type: "true_false", prompt: "An interface with an IP but still administratively down cannot answer a ping.", answer: true, points: 10, order: 5, explanation: "A down port cannot send or receive frames, so the address is unreachable." },
+    ],
+  });
+
+  // ── Module 6 — Network interfaces ─────────────────────────────────────────
+  const m6 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-interfaces" } },
+    create: { courseId: course.id, title: "Network Interfaces", slug: "nos-interfaces", description: "Status, addressing and the most common interface faults.", order: 6, estimatedMinutes: 60 },
+    update: { title: "Network Interfaces", order: 6, estimatedMinutes: 60 },
+  });
+
+  const lesson6 = await upsertLesson(m6.id, course.id, {
+    slug: "network-interfaces",
+    title: "Interface status and addressing faults",
+    description: "Read interface status and diagnose the faults that break reachability.",
+    objectives: [
+      "Interpret interface status (up/down, administratively down)",
+      "Diagnose IP and subnet-mask misconfigurations",
+      "Apply a methodical check to interface faults",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 15,
+    order: 1,
+    content: block([
+      ...p("Most network problems are interface problems. Being able to read an interface's status instantly tells you whether a port is down, disabled, unplugged or misconfigured."),
+      { type: "code", language: "text", code: "FastEthernet0/0 is administratively down, line protocol is down\nFastEthernet0/1 is up, line protocol is up\n  Internet address is 192.168.1.1/24", title: "Reading show interfaces" },
+      { type: "heading", level: 2, text: "Status vocabulary" },
+      { type: "table", headers: ["Status", "Meaning", "Typical cause"], rows: [
+        ["up, line protocol up", "Healthy — sending and receiving", "Nothing to fix"],
+        ["administratively down", "Manually disabled", "'shutdown' was run; fix with 'no shutdown'"],
+        ["down, line protocol down", "No link", "Cable, peer powered off, or port fault"],
+      ] },
+      { type: "heading", level: 2, text: "Addressing faults" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "**Wrong subnet mask** — two devices can have IPs that look similar but actually sit in different networks; only matching IPs *and* masks put them on the same subnet.",
+          "**No IP at all** — a host with no address cannot participate.",
+          "**Wrong gateway** — hosts on different subnets need a router, and the gateway must be the right one.",
+        ],
+      },
+      { type: "table", headers: ["Symptom", "Most likely cause"], rows: [
+        ["Host can't ping anything", "No IP, or interface down"],
+        ["Host pings itself but nothing else", "Wrong mask or no gateway"],
+        ["Port shows administratively down", "It was disabled with 'shutdown'"],
+      ] },
+      { type: "callout", variant: "warning", title: "Same network, not same IP", text: "192.168.1.200/16 and 192.168.1.10/24 are **not** on the same network — the /16 treats far more bits as the network part. Mask disagreements are a classic silent killer." },
+      ...p("In the lab, the network is broken in three places: a down port, a PC with a wrong subnet, and a PC with no address. **MgmtPC** is healthy — compare each host against it to spot what differs."),
+      { type: "netlab", title: "Hands-on: fix the interface faults", template: "nos-faults", missionSlug: "nos-interface-faults" },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can read interface up/down status", "I can spot a subnet-mask mismatch", "I fixed a down port and wrong addressing"] },
+      { type: "exercise", exerciseKey: "ex-nos2-iface-diag", title: "Interface fault diagnosis" },
+      { type: "quiz", quizKey: "qz-nos2-interfaces", title: "Interface check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson6.id, {
+    key: "ex-nos2-iface-diag",
+    type: "fill_blank",
+    title: "Interface fault diagnosis",
+    instructions: "Complete the diagnosis sentences.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "A port disabled by the 'shutdown' command shows as ____.\nRun ____ to bring a disabled port back up.\nTwo hosts with mismatched masks are effectively on different ____.\nA port with no cable and the peer off shows as ____.",
+      blanks: ["administratively down", "no shutdown", ["subnets", "networks"], ["down", "down, line protocol down"]],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson6.id, course.id, {
+    key: "qz-nos2-interfaces",
+    title: "Interface check",
+    description: "Lock in status reading and addressing faults.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "An interface shows 'administratively down'. What is the most likely cause?", options: ["Someone ran 'shutdown' on it", "The cable is unplugged", "The peer is powered off", "Its IP is wrong"], answer: 0, points: 10, order: 1, explanation: "'administratively down' means the port was manually disabled." },
+      { type: "multiple_choice", prompt: "Two hosts have IPs 192.168.1.10/24 and 192.168.1.200/16. Why can't they talk?", options: ["Their masks put them in different networks", "Their IPs are invalid", "They need a switch", "The gateway is down"], answer: 0, points: 10, order: 2, explanation: "A /16 treats many more bits as the network part than a /24 does." },
+      { type: "true_false", prompt: "A switch interface can hold an IP address for management.", answer: true, points: 10, order: 3, explanation: "An SVI or a routed port gives the switch an address you can ping." },
+      { type: "multiple_choice", prompt: "A host can ping itself but nothing else on its subnet. Which is a likely cause?", options: ["Wrong subnet mask", "The port is 'administratively down'", "The device needs a reboot", "Duplicate hostname"], answer: 0, points: 10, order: 4, explanation: "A mask mismatch keeps it off its peers' network even though its own IP is fine." },
+      { type: "true_false", prompt: "'no shutdown' re-enables a port that was administratively disabled.", answer: true, points: 10, order: 5, explanation: "'no shutdown' flips the port back to administratively up." },
+    ],
+  });
+
+  // ── Module 7 — Running vs startup config ──────────────────────────────────
+  const m7 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-config-storage" } },
+    create: { courseId: course.id, title: "Running vs Startup Config", slug: "nos-config-storage", description: "Two configs, two storage places, one command to save.", order: 7, estimatedMinutes: 50 },
+    update: { title: "Running vs Startup Config", order: 7, estimatedMinutes: 50 },
+  });
+
+  const lesson7 = await upsertLesson(m7.id, course.id, {
+    slug: "running-vs-startup-config",
+    title: "Running vs startup configuration",
+    description: "Know where your config lives and how to make it survive a reboot.",
+    objectives: [
+      "Distinguish the running config from the startup config",
+      "Save the running config with 'write memory'",
+      "Explain what happens to unsaved changes on reload",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 11,
+    order: 1,
+    content: block([
+      ...p("A network device keeps **two** copies of its configuration. Confusing them is the classic way to lose work — a reboot erases everything you forgot to save."),
+      { type: "table", headers: ["", "Running config", "Startup config"], rows: [
+        ["What it is", "The config currently active in memory", "The config saved for the next boot"],
+        ["Stored in", "RAM (volatile)", "Persistent storage"],
+        ["Changed by", "Every config command you type", "'write memory' / 'copy running-config startup-config'"],
+        ["On reload", "Lost", "Reloaded into RAM"],
+      ] },
+      { type: "code", language: "text", code: "Switch# show running-config    ← the live config\nSwitch# show startup-config    ← what boots next time\nSwitch# write memory           ← copy running → startup\nSwitch# reload                 ← reboot the device", title: "The config commands" },
+      { type: "callout", variant: "danger", title: "Unsaved = gone", text: "If you configure an interface, reboot without saving, and then wonder why the config is gone — the running config was never written to the startup config." },
+      { type: "analogy", topic: "Configs are like documents", real: "editing a document", mapping: [
+        { real: "Typing in an open document", concept: "Editing the running config in RAM" },
+        { real: "Clicking Save", concept: "'write memory' copies running to startup" },
+        { real: "Closing without saving", concept: "Rebooting — the running config is lost" },
+        { real: "The file on disk", concept: "The startup config in persistent storage" },
+      ] },
+      { type: "guided", title: "Think it through", steps: [
+        { instruction: "You change an interface and reload. Is the change still there?", explain: "No — unless you ran 'write memory', the change only existed in the running config.", check: "Always save after critical changes." },
+        { instruction: "How do you confirm a save worked?", explain: "Compare 'show running-config' and 'show startup-config' — they should match.", check: "Matching outputs mean your save succeeded." },
+      ] },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can explain both configs and where they live", "I can save with write memory", "I know unsaved changes die on reload"] },
+      { type: "exercise", exerciseKey: "ex-nos2-config-storage", title: "Config storage" },
+      { type: "quiz", quizKey: "qz-nos2-config-storage", title: "Config storage check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson7.id, {
+    key: "ex-nos2-config-storage",
+    type: "fill_blank",
+    title: "Config storage",
+    instructions: "Complete the sentences about the two configurations.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "The ____ config lives in RAM and holds what is active right now.\nThe ____ config is saved to persistent storage and loads at boot.\nThe command ____ copies running config into startup config.\nIf you reload without saving, the ____ config is lost.",
+      blanks: [
+        ["running", "running-config"],
+        ["startup", "startup-config"],
+        ["write memory", "copy running-config startup-config"],
+        ["running", "running-config"],
+      ],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson7.id, course.id, {
+    key: "qz-nos2-config-storage",
+    title: "Config storage check",
+    description: "Lock in where configs live and how to save.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Where does the running configuration live?", options: ["In RAM", "On the hard drive", "In flash", "On a remote server"], answer: 0, points: 10, order: 1, explanation: "The running config is held in volatile RAM." },
+      { type: "multiple_choice", prompt: "Which command saves the running config so it survives a reload?", options: ["write memory", "show running-config", "reload", "configure terminal"], answer: 0, points: 10, order: 2, explanation: "'write memory' copies the running config into the startup config." },
+      { type: "true_false", prompt: "The startup config is loaded into RAM when the device boots.", answer: true, points: 10, order: 3, explanation: "At boot, the startup config is copied into RAM and becomes the running config." },
+      { type: "multiple_choice", prompt: "A change exists only in the running config. What happens on reload?", options: ["It is lost", "It is saved automatically", "It is emailed to the admin", "It is applied twice"], answer: 0, points: 10, order: 4, explanation: "Unsaved running-config changes vanish when the device reloads." },
+      { type: "true_false", prompt: "'show startup-config' shows what will load at the next boot.", answer: true, points: 10, order: 5, explanation: "It displays the saved startup configuration." },
+    ],
+  });
+
+  // ── Module 8 — Operational verification ───────────────────────────────────
+  const m8 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-verification" } },
+    create: { courseId: course.id, title: "Operational Verification", slug: "nos-verification", description: "Inspect live state with show commands.", order: 8, estimatedMinutes: 50 },
+    update: { title: "Operational Verification", order: 8, estimatedMinutes: 50 },
+  });
+
+  const lesson8 = await upsertLesson(m8.id, course.id, {
+    slug: "operational-verification",
+    title: "Verify with show commands",
+    description: "Turn the device's live state into answers with the right show command.",
+    objectives: [
+      "Match show commands to the state they reveal",
+      "Verify interfaces, routing tables and configs",
+      "Read show output to confirm a change worked",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("A network engineer's superpower is asking the right questions. Every show command answers one question about the device's live state. Build the reflex: after you change something, always **verify it**."),
+      { type: "table", headers: ["Command", "Answers the question"], rows: [
+        ["show ip interface brief", "Which interfaces are up, and what IPs do they have?"],
+        ["show interfaces", "Detailed port status, counters and errors"],
+        ["show ip route", "Which networks can this device reach, and via where?"],
+        ["show vlan brief", "Which VLANs exist and which ports are in them?"],
+        ["show running-config", "What is active in memory right now?"],
+        ["show startup-config", "What will load at the next boot?"],
+        ["show version", "What hardware and software is this device running?"],
+      ] },
+      { type: "code", language: "text", code: "Switch# show ip interface brief\nInterface              IP-Address      Status\nFastEthernet0/0        192.168.1.1     up\nFastEthernet0/1        unassigned      down", title: "A verification first stop" },
+      { type: "heading", level: 2, text: "Verify, then move on" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "**After configuring an interface** — confirm status shows 'up' and the IP is correct.",
+          "**After adding a route** — confirm it appears in 'show ip route'.",
+          "**After assigning a VLAN** — confirm the port shows up in 'show vlan brief'.",
+        ],
+      },
+      { type: "callout", variant: "tip", title: "Show commands are safe", text: "Show commands only read state — you can run them in any mode and they never change anything. When unsure, run a show first." },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can pick the right show command for a question", "I verified an interface config and a route", "I know show commands are read-only"] },
+      { type: "exercise", exerciseKey: "ex-nos2-verify-shows", title: "Pick the show command" },
+      { type: "quiz", quizKey: "qz-nos2-verification", title: "Verification check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson8.id, {
+    key: "ex-nos2-verify-shows",
+    type: "fill_blank",
+    title: "Pick the show command",
+    instructions: "Choose the show command that answers each question.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "Which networks can the device reach? ____\nWhich VLANs exist and which ports belong to them? ____\nWhich interfaces are up and what IPs do they have? ____\nWhat configuration is active right now? ____",
+      blanks: ["show ip route", "show vlan brief", "show ip interface brief", "show running-config"],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson8.id, course.id, {
+    key: "qz-nos2-verification",
+    title: "Verification check",
+    description: "Lock in which show command reveals what.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "matching", prompt: "Match each show command to the state it reveals.", left: ["show ip interface brief", "show ip route", "show vlan brief", "show running-config"], right: ["Interface status and IPs", "Networks the device can reach", "Configured VLANs and ports", "The active configuration"], answer: identity(4), points: 10, order: 1, explanation: "Each show command surfaces one slice of the device's state." },
+      { type: "multiple_choice", prompt: "Which command shows the routing table?", options: ["show ip route", "show vlan brief", "show interfaces", "show version"], answer: 0, points: 10, order: 2, explanation: "'show ip route' lists connected and static routes." },
+      { type: "multiple_choice", prompt: "Which command lists every interface with status and IP in one line each?", options: ["show ip interface brief", "show startup-config", "show mac address-table", "show arp"], answer: 0, points: 10, order: 3, explanation: "'show ip interface brief' is the standard summary." },
+      { type: "true_false", prompt: "'show running-config' displays the configuration active in memory.", answer: true, points: 10, order: 4, explanation: "It shows the running config as it exists in RAM." },
+      { type: "multiple_choice", prompt: "You just assigned a port to a VLAN. Which command confirms it?", options: ["show vlan brief", "show ip route", "show version", "show history"], answer: 0, points: 10, order: 5, explanation: "'show vlan brief' lists each VLAN and its assigned ports." },
+    ],
+  });
+
+  // ── Module 9 — Switch configuration ───────────────────────────────────────
+  const m9 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-vlans" } },
+    create: { courseId: course.id, title: "Switch Configuration", slug: "nos-vlans", description: "VLANs: create them, assign ports, and isolate traffic.", order: 9, estimatedMinutes: 55 },
+    update: { title: "Switch Configuration", order: 9, estimatedMinutes: 55 },
+  });
+
+  const lesson9 = await upsertLesson(m9.id, course.id, {
+    slug: "switch-configuration",
+    title: "Configure VLANs on a switch",
+    description: "Create VLANs and assign ports so broadcast domains stay small.",
+    objectives: [
+      "Explain what a VLAN isolates and why it matters",
+      "Create a VLAN and assign access ports",
+      "Distinguish access ports from trunk ports",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 14,
+    order: 1,
+    content: block([
+      ...p("Without VLANs, every device on a switch shares one giant broadcast domain — every broadcast reaches every port. **VLANs (Virtual LANs)** split the switch into isolated broadcast domains, so guests, staff and servers never hear each other's traffic."),
+      { type: "visual", title: "One switch, two worlds", nodes: [
+        { id: "sw", label: "SW1", detail: "One physical switch", tone: "primary" },
+        { id: "v10", label: "VLAN 10 — Staff", detail: "PC1, PC2 — broadcast domain A", tone: "success" },
+        { id: "v20", label: "VLAN 20 — Guests", detail: "PC3 — broadcast domain B", tone: "warning" },
+      ], edges: [
+        { from: "sw", to: "v10", label: "port eth0-eth1" },
+        { from: "sw", to: "v20", label: "port eth2" },
+      ] },
+      { type: "code", language: "text", code: "Switch(config)# vlan 10\nSwitch(config-vlan)# name Staff\nSwitch(config-vlan)# exit\nSwitch(config)# interface FastEthernet0/0\nSwitch(config-if)# switchport access vlan 10", title: "Create a VLAN and assign a port" },
+      { type: "table", headers: ["Port type", "Purpose", "When to use"], rows: [
+        ["Access port", "Carries one untagged VLAN", "Connecting a PC, printer or server"],
+        ["Trunk port", "Carries many VLANs, tagged", "Connecting switches or a router-on-a-stick"],
+      ] },
+      { type: "callout", variant: "tip", title: "Naming matters", text: "A meaningful name ('Staff', 'Guest', 'Finance') beats a bare number. The number is what the data plane uses; the name is for humans." },
+      { type: "mistake", title: "Classic oversight", language: "text", wrong: "Switch(config)# vlan 10\nSwitch(config)# interface FastEthernet0/0\nSwitch(config-if)# switchport access vlan 10", wrongWhy: "VLAN 10 exists and the port is assigned — but no 'exit' was run between vlan 10 and the interface command, so the interface command runs in the wrong context.", right: "Switch(config)# vlan 10\nSwitch(config-vlan)# exit\nSwitch(config)# interface FastEthernet0/0\nSwitch(config-if)# switchport access vlan 10", rightWhy: "Each command runs in the mode where it is valid.", fix: "Watch your prompt — exit back to global config before typing 'interface'." },
+      ...p("In the lab, put the two PCs into **VLAN 10** on SW1 and confirm they can still ping each other — they are now alone in their own isolated broadcast domain."),
+      { type: "netlab", title: "Hands-on: VLAN isolation", template: "small-lan", missionSlug: "vlan-isolation" },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can explain what a VLAN isolates", "I created a VLAN and assigned ports", "I can tell access from trunk ports"] },
+      { type: "exercise", exerciseKey: "ex-nos2-vlan-order", title: "Order the VLAN config" },
+      { type: "quiz", quizKey: "qz-nos2-vlans", title: "VLAN check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson9.id, {
+    key: "ex-nos2-vlan-order",
+    type: "ordering",
+    title: "Order the VLAN config",
+    instructions: "Arrange these steps in the order they run on the CLI.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["enable", "configure terminal", "vlan 10", "interface FastEthernet0/0", "switchport access vlan 10", "end"],
+      answer: identity(6),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson9.id, course.id, {
+    key: "qz-nos2-vlans",
+    title: "VLAN check",
+    description: "Lock in VLAN creation, port assignment and isolation.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "What is the main purpose of a VLAN?", options: ["Isolate broadcast domains", "Increase cable speed", "Replace routers", "Encrypt traffic"], answer: 0, points: 10, order: 1, explanation: "VLANs split one switch into separate broadcast domains." },
+      { type: "true_false", prompt: "VLAN 1 is the default VLAN on many switches.", answer: true, points: 10, order: 2, explanation: "Untagged ports usually start in VLAN 1." },
+      { type: "multiple_choice", prompt: "Which command assigns a port to a specific VLAN?", options: ["switchport access vlan 10", "ip address 10.0.0.1 255.255.255.0", "vlan 10", "no shutdown"], answer: 0, points: 10, order: 3, explanation: "'switchport access vlan <id>' puts the port into that VLAN." },
+      { type: "matching", prompt: "Match each port type to its job.", left: ["Access port", "Trunk port"], right: ["Carries one untagged VLAN", "Carries many VLANs, tagged"], answer: identity(2), points: 10, order: 4, explanation: "Access ports serve single hosts; trunks link switches." },
+      { type: "multiple_choice", prompt: "Two hosts are in different VLANs on the same switch. Can they ping each other directly?", options: ["No — they are isolated at layer 2", "Yes — same switch means same domain", "Only if both are in VLAN 1", "Only after a reboot"], answer: 0, points: 10, order: 5, explanation: "Different VLANs are separate broadcast domains; routing is required to connect them." },
+    ],
+  });
+
+  // ── Module 10 — Router configuration ──────────────────────────────────────
+  const m10 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-routing" } },
+    create: { courseId: course.id, title: "Router Configuration", slug: "nos-routing", description: "Connect networks with static routes.", order: 10, estimatedMinutes: 55 },
+    update: { title: "Router Configuration", order: 10, estimatedMinutes: 55 },
+  });
+
+  const lesson10 = await upsertLesson(m10.id, course.id, {
+    slug: "router-configuration",
+    title: "Configure static routing",
+    description: "Build a path between two networks with connected and static routes.",
+    objectives: [
+      "Explain connected routes and next hops",
+      "Add a static route with 'ip route'",
+      "Remember the return route for two-way traffic",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 14,
+    order: 1,
+    content: block([
+      ...p("A router connects networks. Its **routing table** is the map it uses to decide where each packet goes: directly connected networks on its own interfaces, and everything else reached **via a next hop** — the IP of the neighboring router."),
+      { type: "code", language: "text", code: "R1(config)# ip route 192.168.2.0 255.255.255.0 10.0.0.2", title: "A static route" },
+      { type: "table", headers: ["Part", "Meaning"], rows: [
+        ["192.168.2.0 255.255.255.0", "The destination network and mask"],
+        ["10.0.0.2", "The next-hop IP — where to send the packet next"],
+      ] },
+      { type: "heading", level: 2, text: "Routing is a two-way street" },
+      ...p("A packet must be routed **in both directions**. R1 needs a route to Site B, and R2 needs a route back to Site A. Forget the return route and replies silently die at the far router."),
+      { type: "visual", title: "A route is a chain of hops", nodes: [
+        { id: "pc1", label: "PC1 192.168.1.10", detail: "Site A", tone: "muted" },
+        { id: "r1", label: "R1", detail: "Has a route to 192.168.2.0 via 10.0.0.2", tone: "primary" },
+        { id: "r2", label: "R2", detail: "Has a route to 192.168.1.0 via 10.0.0.1", tone: "primary" },
+        { id: "pc2", label: "PC2 192.168.2.10", detail: "Site B", tone: "muted" },
+      ], edges: [
+        { from: "pc1", to: "r1", label: "gateway" },
+        { from: "r1", to: "r2", label: "10.0.0.0/30" },
+        { from: "r2", to: "pc2", label: "LAN" },
+      ] },
+      { type: "callout", variant: "tip", title: "The /30 link", text: "Point-to-point router links usually use a /30 subnet — exactly two usable addresses, one per router end." },
+      { type: "mistake", title: "One direction is not enough", language: "text", wrong: "R1(config)# ip route 192.168.2.0 255.255.255.0 10.0.0.2", wrongWhy: "PC1 can reach Site B, but R2 has no route back to 192.168.1.0 — replies never arrive.", right: "R1(config)# ip route 192.168.2.0 255.255.255.0 10.0.0.2\nR2(config)# ip route 192.168.1.0 255.255.255.0 10.0.0.1", rightWhy: "Both routers hold the route they need to forward packets toward the other site.", fix: "After configuring one direction, always configure the return route." },
+      ...p("In the lab, configure the static routes on **R1** and **R2**, give the PCs their addresses and gateways, and verify with a ping between sites."),
+      { type: "netlab", title: "Hands-on: route two networks", template: "two-router", missionSlug: "routing-across-networks" },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can read a static route command", "I added routes in both directions", "I verified reachability across sites"] },
+      { type: "exercise", exerciseKey: "ex-nos2-static-route", title: "Static route anatomy" },
+      { type: "quiz", quizKey: "qz-nos2-routing", title: "Routing check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson10.id, {
+    key: "ex-nos2-static-route",
+    type: "fill_blank",
+    title: "Static route anatomy",
+    instructions: "Complete the sentences about static routing.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "The command to add a static route is ____.\nThe IP of the neighboring router to hand a packet to is called the ____.\nA router knows networks attached to its own ports as ____ routes.\nFor traffic to flow both ways you must configure the ____ route too.",
+      blanks: [
+        "ip route",
+        ["next hop", "next-hop"],
+        ["connected", "directly connected"],
+        ["return", "reverse"],
+      ],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson10.id, course.id, {
+    key: "qz-nos2-routing",
+    title: "Routing check",
+    description: "Lock in static routes, next hops and connected routes.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which command adds a static route on an IOS-style router?", options: ["ip route 192.168.2.0 255.255.255.0 10.0.0.2", "route add 192.168.2.0 gw 10.0.0.2", "ipconfig /routing", "add static route 192.168.2.0"], answer: 0, points: 10, order: 2, explanation: "'ip route <network> <mask> <next-hop>' is the IOS syntax." },
+      { type: "true_false", prompt: "A router needs routes in both directions for traffic to flow both ways.", answer: true, points: 10, order: 3, explanation: "Replies need a return route on the far router." },
+      { type: "multiple_choice", prompt: "What is a next hop?", options: ["The IP of the next router the packet should reach", "The packet's destination MAC", "The source PC's gateway only", "A backup cable"], answer: 0, points: 10, order: 4, explanation: "The next hop is where the current router forwards the packet next." },
+      { type: "multiple_choice", prompt: "A /30 subnet is typically used for what?", options: ["Point-to-point router links", "Large LANs", "The broadcast domain", "Loopback testing"], answer: 0, points: 10, order: 5, explanation: "/30 provides exactly two usable hosts — one per router end." },
+      { type: "true_false", prompt: "A router learns its own directly attached networks as connected routes.", answer: true, points: 10, order: 6, explanation: "Interfaces with an IP create connected routes automatically." },
+    ],
+  });
+
+  // ── Module 11 — Managing network devices ──────────────────────────────────
+  const m11 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-mgmt" } },
+    create: { courseId: course.id, title: "Managing Network Devices", slug: "nos-mgmt", description: "Operational discipline: backups, documentation, change control.", order: 11, estimatedMinutes: 50 },
+    update: { title: "Managing Network Devices", order: 11, estimatedMinutes: 50 },
+  });
+
+  const lesson11 = await upsertLesson(m11.id, course.id, {
+    slug: "managing-network-devices",
+    title: "Operational management",
+    description: "Keep the network healthy with backups, documentation and change control.",
+    objectives: [
+      "Apply backup and documentation best practices",
+      "Explain in-band vs out-of-band management",
+      "Plan maintenance windows and change control",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 11,
+    order: 1,
+    content: block([
+      ...p("Configuration skill is only half the job. Professional networks run on **operational discipline** — knowing every config is backed up, documented and changed deliberately."),
+      { type: "heading", level: 2, text: "Back up your configs" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "Save the startup config after every change (`write memory`).",
+          "Store copies off-box (a backup server, git, or shared drive) after significant changes.",
+          "Label backups with dates and device names so you can find the right one.",
+        ],
+      },
+      { type: "heading", level: 2, text: "Document everything" },
+      { type: "table", headers: ["Artifact", "What to record"], rows: [
+        ["Topology map", "Devices, links, subnets, VLANs"],
+        ["Address plan", "Which IPs are used and reserved"],
+        ["Config notes", "Why each change was made (a change log)"],
+        ["Access plan", "Who can reach which device and how"],
+      ] },
+      { type: "heading", level: 2, text: "In-band vs out-of-band" },
+      ...p("**In-band** management reaches the device through the network it serves (SSH from anywhere). **Out-of-band** uses a direct console/serial connection — it keeps working even when the network is down. Real devices support both."),
+      { type: "callout", variant: "warning", title: "Conceptual in this course", text: "TFTP/SFTP config backups, syslog collection and remote access servers are standard practice but are **not simulated** in the lab. Learn the principles here; apply them on real equipment." },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can justify backing up configs", "I know in-band vs out-of-band management", "I understand change control basics"] },
+      { type: "exercise", exerciseKey: "ex-nos2-mgmt", title: "Management practice" },
+      { type: "quiz", quizKey: "qz-nos2-mgmt", title: "Management check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson11.id, {
+    key: "ex-nos2-mgmt",
+    type: "fill_blank",
+    title: "Management practice",
+    instructions: "Complete the operational best-practice sentences.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "After a change, save it with ____.\nKeeping config copies off the device is called ____.\nManagement over the network itself is ____ management.\nManagement over a direct console connection is ____ management.",
+      blanks: [["write memory"], ["backing up", "backup"], ["in-band"], ["out-of-band", "out of band"]],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson11.id, course.id, {
+    key: "qz-nos2-mgmt",
+    title: "Management check",
+    description: "Lock in the operational practices that keep networks healthy.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which is a best practice after a significant config change?", options: ["Save and back up the configuration", "Reboot the device immediately", "Delete the old config", "Change the hostname"], answer: 0, points: 10, order: 1, explanation: "Save it and keep an off-box copy in case you need to roll back." },
+      { type: "true_false", prompt: "Keeping dated backups of device configs is a best practice.", answer: true, points: 10, order: 2, explanation: "Dated backups let you roll back to a known-good state." },
+      { type: "multiple_choice", prompt: "What is out-of-band management?", options: ["A direct console/serial connection", "Managing over the production network", "Cloud management", "Managing via email"], answer: 0, points: 10, order: 3, explanation: "Out-of-band management works even when the network is down." },
+      { type: "multiple_choice", prompt: "What is the purpose of a change log?", options: ["Record why each change was made", "Replace the routing table", "Speed up the network", "Encrypt configs"], answer: 0, points: 10, order: 4, explanation: "A change log records why, what, and who — so problems can be traced." },
+      { type: "true_false", prompt: "Config backups belong off the device so they survive a device failure.", answer: true, points: 10, order: 5, explanation: "An off-box copy lets you restore after total device loss." },
+    ],
+  });
+
+  // ── Module 12 — NOS security ──────────────────────────────────────────────
+  const m12 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-security" } },
+    create: { courseId: course.id, title: "NOS Security Fundamentals", slug: "nos-security", description: "Protect the management plane: access, AAA and least privilege.", order: 12, estimatedMinutes: 55 },
+    update: { title: "NOS Security Fundamentals", order: 12, estimatedMinutes: 55 },
+  });
+
+  const lesson12 = await upsertLesson(m12.id, course.id, {
+    slug: "nos-security-fundamentals",
+    title: "Secure the management plane",
+    description: "Lock down who can reach the device and what they can do.",
+    objectives: [
+      "Explain the management plane and why it is a target",
+      "Apply least-privilege and account separation",
+      "Describe AAA and the role of encrypted credentials",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 12,
+    order: 1,
+    content: block([
+      ...p("An attacker who can reach your device's management plane controls the network. Securing the NOS means controlling **who** can get in, **what** they can do, and **leaving a record** of what happened."),
+      { type: "heading", level: 2, text: "The management plane" },
+      ...p("Every device has three planes: the **data plane** (forwards traffic), the **control plane** (builds tables), and the **management plane** (the CLI, web and API surfaces an admin uses). The management plane is the crown jewels — it must never be exposed carelessly."),
+      { type: "heading", level: 2, text: "The hardening checklist" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "**Strong, unique credentials** on every device.",
+          "**Least privilege** — each account can only do what its job requires.",
+          "**Separate admin from operator** accounts so actions are attributable.",
+          "**Encrypted credentials** — never store or transmit plaintext passwords.",
+          "**Limit management access** — allow it only from trusted networks.",
+        ],
+      },
+      { type: "heading", level: 2, text: "AAA" },
+      { type: "table", headers: ["A", "Meaning", "Answers"], rows: [
+        ["Authentication", "Who are you?", "Verifies identity with credentials"],
+        ["Authorization", "What can you do?", "Enforces per-account permissions"],
+        ["Accounting", "What did you do?", "Logs actions for audit"],
+      ] },
+      { type: "callout", variant: "warning", title: "Conceptual in this course", text: "Real devices enforce login passwords, privilege levels and AAA. The lab focuses on configuration and verification, so device authentication is **not simulated** — apply these practices on real hardware." },
+      { type: "analogy", topic: "AAA is like a secure building", real: "entering a restricted facility", mapping: [
+        { real: "Show your ID at the door", concept: "Authentication — prove who you are" },
+        { real: "Your badge only opens your floor", concept: "Authorization — least privilege" },
+        { real: "The security log records your visit", concept: "Accounting — auditable actions" },
+      ] },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can explain the management plane", "I can apply least privilege and account separation", "I can describe Authentication, Authorization, Accounting"] },
+      { type: "exercise", exerciseKey: "ex-nos2-security", title: "Security practice" },
+      { type: "quiz", quizKey: "qz-nos2-security", title: "Security check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson12.id, {
+    key: "ex-nos2-security",
+    type: "fill_blank",
+    title: "Security practice",
+    instructions: "Complete the sentences about NOS security.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "Giving each account only the access its job requires is ____ privilege.\nThe plane that exposes the CLI and management interfaces is the ____ plane.\nVerifying who you are is ____; enforcing what you can do is ____.\nCredentials must be ____, never stored in plaintext.",
+      blanks: ["least", ["management"], "authentication", "authorization", "encrypted"],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson12.id, course.id, {
+    key: "qz-nos2-security",
+    title: "Security check",
+    description: "Lock in management-plane security and AAA.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "Which plane does an SSH session to a router's CLI use?", options: ["The management plane", "The data plane", "The control plane", "The forwarding plane"], answer: 0, points: 10, order: 1, explanation: "The management plane hosts the CLI, web and API surfaces." },
+      { type: "true_false", prompt: "Storing device passwords in plaintext configs is acceptable.", answer: false, points: 10, order: 2, explanation: "Credentials must be hashed or encrypted, never stored in the clear." },
+      { type: "multiple_choice", prompt: "What does least privilege mean?", options: ["Each account gets only the access its role requires", "Every admin has full access", "Passwords are shared", "All users are locked out"], answer: 0, points: 10, order: 3, explanation: "Least privilege minimizes the blast radius of any one account." },
+      { type: "matching", prompt: "Match each AAA component to its job.", left: ["Authentication", "Authorization", "Accounting"], right: ["Prove identity", "Enforce permissions", "Log actions"], answer: identity(3), points: 10, order: 4, explanation: "AAA = who, what, and a record of it." },
+      { type: "multiple_choice", prompt: "Why separate admin and operator accounts?", options: ["So actions are attributable and least privilege holds", "To reduce the number of devices", "To speed up the CLI", "To avoid config backups"], answer: 0, points: 10, order: 5, explanation: "Separate accounts let you audit who did what and limit each role." },
+    ],
+  });
+
+  // ── Module 13 — Troubleshooting ───────────────────────────────────────────
+  const m13 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-troubleshoot" } },
+    create: { courseId: course.id, title: "Troubleshooting", slug: "nos-troubleshoot", description: "A methodical approach to finding and fixing faults.", order: 13, estimatedMinutes: 60 },
+    update: { title: "Troubleshooting", order: 13, estimatedMinutes: 60 },
+  });
+
+  const lesson13 = await upsertLesson(m13.id, course.id, {
+    slug: "nos-troubleshooting",
+    title: "A troubleshooting methodology",
+    description: "Turn guesswork into a repeatable process that finds the fault fast.",
+    objectives: [
+      "Apply a structured identify → isolate → fix → verify cycle",
+      "Choose bottom-up, top-down or divide-and-conquer",
+      "Change one thing at a time and verify after each step",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 15,
+    order: 1,
+    content: block([
+      ...p("The best troubleshooters are not the ones who guess right — they are the ones with a **process**. The process never changes: identify the problem, form a hypothesis, test it, isolate the cause, fix it, verify, and document."),
+      { type: "visual", title: "The troubleshooting cycle", nodes: [
+        { id: "identify", label: "Identify the problem", detail: "What exactly is broken?", tone: "primary" },
+        { id: "hypothesis", label: "Form a hypothesis", detail: "Most likely cause first", tone: "primary" },
+        { id: "test", label: "Test the hypothesis", detail: "One change at a time", tone: "warning" },
+        { id: "isolate", label: "Isolate the cause", detail: "Narrow the fault", tone: "warning" },
+        { id: "fix", label: "Fix it", detail: "Apply the correction", tone: "success" },
+        { id: "verify", label: "Verify + document", detail: "Prove it works, record it", tone: "success" },
+      ], edges: [
+        { from: "identify", to: "hypothesis", label: "" },
+        { from: "hypothesis", to: "test", label: "" },
+        { from: "test", to: "isolate", label: "" },
+        { from: "isolate", to: "fix", label: "" },
+        { from: "fix", to: "verify", label: "" },
+      ] },
+      { type: "heading", level: 2, text: "Three search strategies" },
+      { type: "table", headers: ["Strategy", "Where you start", "When it shines"], rows: [
+        ["Bottom-up", "Physical layer (cables, ports, links)", "An interface is down — check the cable and status first"],
+        ["Top-down", "Application layer down to the wire", "The app fails but links are fine"],
+        ["Divide-and-conquer", "The middle (routing/switching)", "A ping dies somewhere — bisect the path"],
+      ] },
+      { type: "callout", variant: "danger", title: "Change one thing at a time", text: "Change several variables at once and you will not know which one fixed it — or what broke it. Make one change, verify, move on." },
+      { type: "mistake", title: "Guesswork vs process", language: "text", wrong: "PC1 cannot ping PC2, so I changed the IPs, rebooted the switch and swapped cables — still broken.", wrongWhy: "Multiple simultaneous changes make the cause unidentifiable.", right: "Ping both directions, check each interface's status, then fix the single fault and re-verify.", rightWhy: "Each step isolates the fault so the real cause becomes obvious.", fix: "Ping first, then inspect — never change blindly." },
+      ...p("In the lab, a routed network has several faults: a down interface and missing routes. Use the process — check status, find what is missing, fix each thing, and verify with a ping."),
+      { type: "netlab", title: "Hands-on: troubleshoot a routed network", template: "nos-faults-routed", missionSlug: "nos-route-fault" },
+      { type: "checkpoint", title: "Checkpoint", items: ["I follow the identify → fix → verify cycle", "I picked a strategy that fits the fault", "I changed one thing at a time"] },
+      { type: "exercise", exerciseKey: "ex-nos2-troubleshoot", title: "Order the method" },
+      { type: "quiz", quizKey: "qz-nos2-troubleshoot", title: "Troubleshooting check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson13.id, {
+    key: "ex-nos2-troubleshoot",
+    type: "ordering",
+    title: "Order the method",
+    instructions: "Arrange the troubleshooting steps in the order a pro follows them.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["Identify the problem", "Form a hypothesis about the cause", "Test the hypothesis with one change", "Isolate the exact cause", "Apply the fix", "Verify the fix and document it"],
+      answer: identity(6),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson13.id, course.id, {
+    key: "qz-nos2-troubleshoot",
+    title: "Troubleshooting check",
+    description: "Lock in a methodical approach to faults.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "ordering", prompt: "Order these troubleshooting steps.", items: ["Identify the problem", "Form a hypothesis", "Test the hypothesis", "Fix the fault"], answer: identity(4), points: 10, order: 1, explanation: "Identify → hypothesize → test → fix — then verify and document." },
+      { type: "multiple_choice", prompt: "A bottom-up approach starts at which layer?", options: ["The physical layer (cables and ports)", "The application", "The routing table", "The cloud"], answer: 0, points: 10, order: 2, explanation: "Bottom-up starts with links, cables and interface status." },
+      { type: "true_false", prompt: "Changing several things at once is a good troubleshooting practice.", answer: false, points: 10, order: 3, explanation: "Multiple changes make the true cause impossible to isolate." },
+      { type: "multiple_choice", prompt: "PC1 can't ping PC2, but both interfaces are up. What should you check next?", options: ["Their IPs and masks are on the same subnet", "Replace the PCs", "Reboot the switch", "Change the hostname"], answer: 0, points: 10, order: 4, explanation: "Link is up; the next layer is addressing." },
+      { type: "true_false", prompt: "The final troubleshooting step should always verify the fix and document it.", answer: true, points: 10, order: 5, explanation: "Verify proves the fix; documentation helps the next engineer." },
+    ],
+  });
+
+  // ── Module 14 — Advanced NOS operations ───────────────────────────────────
+  const m14 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-advanced" } },
+    create: { courseId: course.id, title: "Advanced NOS Operations", slug: "nos-advanced", description: "Logging, time sync, monitoring and upgrades.", order: 14, estimatedMinutes: 50 },
+    update: { title: "Advanced NOS Operations", order: 14, estimatedMinutes: 50 },
+  });
+
+  const lesson14 = await upsertLesson(m14.id, course.id, {
+    slug: "advanced-nos-operations",
+    title: "Logging, monitoring and upgrades",
+    description: "Keep an eye on devices with syslog, NTP and SNMP — and upgrade safely.",
+    objectives: [
+      "Describe syslog, NTP and SNMP and what each is for",
+      "Follow safe software upgrade practice",
+      "Know which lab features are conceptual",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 11,
+    order: 1,
+    content: block([
+      ...p("Healthy networks are **observable**. Engineers rely on a few standard protocols to watch devices: logging events, keeping clocks in sync, and letting monitoring systems query state."),
+      { type: "table", headers: ["Protocol", "Purpose", "Example use"], rows: [
+        ["syslog", "Sends device log messages to a central server", "Collect every interface flap and error"],
+        ["NTP", "Keeps device clocks synchronized", "Accurate timestamps across all logs"],
+        ["SNMP", "Lets a management station read device state", "Poll interface utilization and alerts"],
+      ] },
+      { type: "heading", level: 2, text: "Software updates the safe way" },
+      {
+        type: "list",
+        ordered: true,
+        items: [
+          "**Review** the release notes and known issues.",
+          "**Test** in a lab or staging environment first.",
+          "**Back up** the running config and current image before starting.",
+          "**Plan** a maintenance window with rollback in mind.",
+          "**Verify** the device and features after the upgrade.",
+        ],
+      },
+      { type: "callout", variant: "warning", title: "Conceptual in this course", text: "Syslog, NTP and SNMP are real-world NOS features but are **not simulated** in the lab. The core config and verification skills you practiced are — the same commands, modes and workflows." },
+      { type: "checkpoint", title: "Checkpoint", items: ["I can explain syslog, NTP and SNMP", "I can sequence a safe upgrade", "I know which features are conceptual here"] },
+      { type: "exercise", exerciseKey: "ex-nos2-advanced", title: "Operations toolkit" },
+      { type: "quiz", quizKey: "qz-nos2-advanced", title: "Advanced operations check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson14.id, {
+    key: "ex-nos2-advanced",
+    type: "fill_blank",
+    title: "Operations toolkit",
+    instructions: "Complete the sentences about monitoring and upgrades.",
+    starterCode: "",
+    config: {
+      kind: "fill_blank",
+      template: "____ collects device log messages on a central server.\n____ keeps device clocks in sync so logs have accurate timestamps.\n____ lets a management station read device state.\nBefore an upgrade, ____ the config and current image.",
+      blanks: [["syslog"], ["NTP"], ["SNMP"], ["back up", "backup"]],
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson14.id, course.id, {
+    key: "qz-nos2-advanced",
+    title: "Advanced operations check",
+    description: "Lock in observability protocols and upgrade discipline.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "What does a syslog server collect?", options: ["Device log messages", "Backup images", "Passwords", "MAC addresses only"], answer: 0, points: 10, order: 1, explanation: "Syslog aggregates log messages from many devices." },
+      { type: "multiple_choice", prompt: "Why do network devices use NTP?", options: ["To keep clocks synchronized for accurate logs", "To encrypt traffic", "To replace routing", "To speed up forwarding"], answer: 0, points: 10, order: 2, explanation: "Accurate timestamps make logs comparable across devices." },
+      { type: "true_false", prompt: "SNMP lets a management station query device state.", answer: true, points: 10, order: 3, explanation: "SNMP exposes counters and state to monitoring systems." },
+      { type: "multiple_choice", prompt: "What should you do before a software upgrade?", options: ["Back up the config and current image, and test first", "Reboot immediately", "Delete the old image", "Skip the release notes"], answer: 0, points: 10, order: 4, explanation: "Backup + testing are the non-negotiables of change." },
+      { type: "true_false", prompt: "A maintenance window should include a rollback plan.", answer: true, points: 10, order: 5, explanation: "If the upgrade fails, you need a path back to the known-good state." },
+    ],
+  });
+
+  // ── Module 15 — Capstone ──────────────────────────────────────────────────
+  const m15 = await prisma.module.upsert({
+    where: { courseId_slug: { courseId: course.id, slug: "nos-capstone" } },
+    create: { courseId: course.id, title: "Capstone Lab", slug: "nos-capstone", description: "Build a small enterprise network end to end.", order: 15, estimatedMinutes: 60 },
+    update: { title: "Capstone Lab", order: 15, estimatedMinutes: 60 },
+  });
+
+  const lesson15 = await upsertLesson(m15.id, course.id, {
+    slug: "nos-capstone-lab",
+    title: "Capstone: a small enterprise network",
+    description: "Bring it all together — VLANs, routing, faults, verification and saves.",
+    objectives: [
+      "Apply every skill from the course in one scenario",
+      "Deliver VLAN isolation and inter-site routing",
+      "Fix faults and save the working configuration",
+    ],
+    difficulty: "ADVANCED",
+    estimatedMinutes: 20,
+    order: 1,
+    content: block([
+      ...p("Everything you have practiced comes together now. You run a small company with two sites: **Site A** (staff + guests) and **Site B**, connected by two routers over a serial link. The network was configured carelessly and is broken. Your job: make it work, isolate the guests, and save the configs."),
+      { type: "heading", level: 2, text: "The requirements" },
+      { type: "table", headers: ["Requirement", "Details"], rows: [
+        ["VLANs at Site A", "VLAN 10 (staff: PC1, MgmtPC, R1 link) and VLAN 20 (guest: PC2 only)"],
+        ["Inter-site routing", "192.168.1.0/24 (Site A) must reach 192.168.2.0/24 (Site B)"],
+        ["Guests isolated", "VLAN 20 must not reach staff or Site B"],
+        ["Management", "MgmtPC in VLAN 10 with a working gateway"],
+        ["Faults to fix", "R2's LAN port is down; PC4's addressing is wrong; routes are missing"],
+        ["Persistence", "R1 and R2 must have saved startup configs"],
+      ] },
+      { type: "heading", level: 2, text: "Acceptance checklist" },
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          "PC1 (192.168.1.10) can ping PC3 (192.168.2.10) across the serial link.",
+          "PC2 (VLAN 20) cannot reach anything outside its VLAN.",
+          "MgmtPC can reach its gateway 192.168.1.1.",
+          "'show vlan brief' on SW-A shows VLANs 10 and 20 with the right ports.",
+          "'show startup-config' on R1 and R2 shows saved configs.",
+        ],
+      },
+      { type: "callout", variant: "tip", title: "Suggested order", text: "Start with the layer-2 pieces (VLANs and port assignments), then bring R2's port up, add the routes, fix PC4, ping to verify, and finally save everything with 'write memory'." },
+      { type: "netlab", title: "Hands-on: the capstone", template: "nos-capstone", missionSlug: "nos-capstone" },
+      { type: "checkpoint", title: "Checkpoint", items: ["My two sites can ping across the serial link", "Guest VLAN 20 is isolated from the rest", "R1 and R2 saved their startup configs"] },
+      { type: "exercise", exerciseKey: "ex-nos2-capstone", title: "Capstone sequence" },
+      { type: "quiz", quizKey: "qz-nos2-capstone", title: "Capstone check" },
+    ]),
+  });
+
+  await upsertExercise(course.id, lesson15.id, {
+    key: "ex-nos2-capstone",
+    type: "ordering",
+    title: "Capstone sequence",
+    instructions: "A sensible rollout order for the capstone network. Arrange the steps.",
+    starterCode: "",
+    config: {
+      kind: "ordering",
+      steps: ["Create VLANs 10 and 20 on SW-A", "Assign access ports for staff, guests and the R1 link", "Bring up R2's LAN interface", "Add static routes on both routers", "Fix PC4's addressing", "Verify with a ping", "Save the configs with write memory"],
+      answer: identity(7),
+    },
+    points: 10,
+    order: 1,
+  });
+
+  await upsertQuiz(lesson15.id, course.id, {
+    key: "qz-nos2-capstone",
+    title: "Capstone check",
+    description: "Prove you can put the whole course together.",
+    passScore: 70,
+    timeLimit: 6,
+    order: 1,
+    questions: [
+      { type: "multiple_choice", prompt: "In the capstone, why is the R1-facing port on SW-A placed in access VLAN 10?", options: ["So only VLAN 10 traffic can reach the router, isolating VLAN 20", "Because trunks are forbidden", "To reduce cable length", "To disable routing"], answer: 0, points: 10, order: 1, explanation: "A VLAN 10 access port means guest (VLAN 20) frames never reach the router." },
+      { type: "true_false", prompt: "Guest VLAN isolation means guest traffic cannot reach the staff network.", answer: true, points: 10, order: 2, explanation: "VLAN 20 hosts only see their own VLAN at layer 2." },
+      { type: "multiple_choice", prompt: "Before PC1 can ping PC3, which must be true?", options: ["Routing exists in both directions", "PC4 has the right IP", "The switch is in VLAN 10", "VLAN 20 is named"], answer: 0, points: 10, order: 3, explanation: "Inter-site traffic needs routes on both routers." },
+      { type: "multiple_choice", prompt: "Why finish the capstone with 'write memory' on both routers?", options: ["So the working config survives a reload", "To erase old configs", "To enable VLANs", "To speed up the CLI"], answer: 0, points: 10, order: 4, explanation: "Saving copies running config to startup config." },
+      { type: "true_false", prompt: "PC4 must be 192.168.2.11/24 with gateway 192.168.2.1 for the capstone to pass.", answer: true, points: 10, order: 5, explanation: "PC4's wrong addressing was one of the planted faults." },
+    ],
+  });
+
+  return { course, modules: [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15], lessons: [lesson1, lesson2, lesson3, lesson4, lesson5, lesson6, lesson7, lesson8, lesson9, lesson10, lesson11, lesson12, lesson13, lesson14, lesson15] };
 }
 
 // ---------------------------------------------------------------------------
@@ -1721,7 +3519,7 @@ async function seedAiCourse(categoryId: string) {
       slug: "coding-with-ai",
       description: "Work smarter with AI code assistants like OpenCode — write prompts that get useful answers and vibe-code your way through real projects.",
       longDescription:
-        "AI assistants are the fastest way to learn and ship code — if you know how to talk to them. This short course teaches prompt engineering fundamentals and the vibe-coding workflow, with the same hands-on exercises and grading as every other CodeSphere course.",
+        "AI assistants are the fastest way to learn and ship code — if you know how to talk to them. This short course teaches prompt engineering fundamentals and the vibe-coding workflow, with the same hands-on exercises and grading as every other CreyvaPH course.",
       categoryId,
       icon: "🤖",
       color: "#8b5cf6",
@@ -1870,7 +3668,7 @@ document.getElementById('input').addEventListener('keydown', function (e) { if (
         fix: "Never mark an AI answer done without running it. Test the empty case, the double-space case, and the normal case." },
 
       S(9, "Challenge", "Say hello to your assistant."),
-      ...p("Complete the exercise below. It uses the same grading as every CodeSphere exercise — the assistant can't hand you the answer, you have to type it."),
+      ...p("Complete the exercise below. It uses the same grading as every CreyvaPH exercise — the assistant can't hand you the answer, you have to type it."),
       { type: "exercise", exerciseKey: "ex-ai-greeting", title: "Say hello to your assistant" },
 
       S(10, "Reflection", "Think it through."),
@@ -3677,17 +5475,18 @@ async function upsertProject(courseId: string, data: {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Seeding CodeSphere�?�");
+  console.log("Seeding CreyvaPH…");
   await upsertUser();
   await upsertAchievements();
   await upsertProgression();
-  const { webDev, networking } = await upsertCatalog();
+  const { webDev, networking, techPro } = await upsertCatalog();
 
   await seedHtmlCourse(webDev.id);
   await seedCssCourse(webDev.id);
   await seedJsCourse(webDev.id);
   await seedAiCourse(webDev.id);
   await seedNetworkingCourse(networking.id);
+  await seedNosCourse(techPro.id);
   await seedWorlds();
   await seedGames();
 

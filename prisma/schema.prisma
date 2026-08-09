@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// CodeSphere — Learning Management System schema
+// CreyvaPH — Learning Management System schema
 //
 // DESIGN NOTES
 // 1. Provider-portable: no enums (String + app-level constants), no

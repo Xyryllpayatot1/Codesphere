@@ -27,6 +27,34 @@ export const WIFI_PORT = "radio0";
 export const isPoweredOff = (d: Device | undefined) => d?.poweredOn === false;
 
 // ---------------------------------------------------------------------------
+// VLAN helpers. Switches learn and filter on VLAN only once the admin config
+// is non-default (a VLAN > 1 exists, an access port is reassigned, or a port
+// is a trunk). A default switch — or any hub/AP/router — is vlan-insensitive,
+// so every pre-existing lab keeps its exact current behaviour.
+// ---------------------------------------------------------------------------
+
+const ifaceOf = (d: Device, portId: string) => d.config.interfaces.find((i) => i.id === portId);
+
+export const portVlan = (d: Device, portId: string): number => ifaceOf(d, portId)?.accessVlan ?? 1;
+
+export const portIsTrunk = (d: Device, portId: string): boolean => ifaceOf(d, portId)?.trunk === true;
+
+/** True when a switch actually enforces VLAN membership. */
+export function vlanActive(d: Device): boolean {
+  if (d.type !== "switch") return false;
+  if (d.vlans && d.vlans.length > 1) return true;
+  return d.config.interfaces.some((i) => i.trunk === true || (i.accessVlan !== undefined && i.accessVlan !== 1));
+}
+
+/** Whether the port would carry a frame tagged with `vlan`. Non-switches and
+ *  trunk ports carry everything; access ports carry only their own VLAN. */
+export function portCarriesVlan(d: Device, portId: string, vlan: number): boolean {
+  if (d.type !== "switch") return true;
+  if (portIsTrunk(d, portId)) return true;
+  return portVlan(d, portId) === vlan;
+}
+
+// ---------------------------------------------------------------------------
 // Wireless association.
 // ---------------------------------------------------------------------------
 
@@ -129,34 +157,44 @@ export function unionFind(devices: Device[], cables: Cable[], wirelessLinks: Wir
 
 type PathNode = { deviceId: string; portId: string };
 
+/**
+ * BFS over (device, port) with VLAN tracking. A frame starts in `vlan` (1) and
+ * keeps it across cables; a switch re-tags it when it enters an access port and
+ * only forwards it to ports that carry that VLAN. Non-VLAN devices behave
+ * exactly like the original engine.
+ */
 function findL2Path(
   devices: Device[],
   cables: Cable[],
   wirelessLinks: WirelessLink[],
   fromNode: { deviceId: string; portId: string },
-  toNode: { deviceId: string; portId: string }
+  toNode: { deviceId: string; portId: string },
+  startVlan = 1
 ): { path: PathNode[]; viaCableIds: (string | undefined)[] } | null {
   if (fromNode.deviceId === toNode.deviceId && fromNode.portId === toNode.portId) {
     return { path: [fromNode], viaCableIds: [] };
   }
 
   const device = (id: string) => devices.find((d) => d.id === id);
-  const start = portKey(fromNode.deviceId, fromNode.portId);
+  const nodeKey = (id: string, vlan: number) => `${id}::v${vlan}`;
+  const start = nodeKey(portKey(fromNode.deviceId, fromNode.portId), startVlan);
   const goal = portKey(toNode.deviceId, toNode.portId);
   const visited = new Set<string>([start]);
   const cameFrom = new Map<string, { prev: string; viaCableId?: string }>();
-  const queue: { nodeId: string; deviceId: string; portId: string }[] = [{ nodeId: start, deviceId: fromNode.deviceId, portId: fromNode.portId }];
+  const queue: { nodeId: string; deviceId: string; portId: string; vlan: number }[] = [
+    { nodeId: start, deviceId: fromNode.deviceId, portId: fromNode.portId, vlan: startVlan },
+  ];
   let goalKey: string | null = null;
 
   while (queue.length > 0 && goalKey === null) {
     const cur = queue.shift()!;
-    const neighbors: { nodeId: string; deviceId: string; portId: string; viaCableId?: string }[] = [];
+    const neighbors: { nodeId: string; deviceId: string; portId: string; vlan: number; viaCableId?: string }[] = [];
     for (const c of cables) {
       if (c.fromDevice === cur.deviceId && c.fromPort === cur.portId) {
-        neighbors.push({ nodeId: portKey(c.toDevice, c.toPort), deviceId: c.toDevice, portId: c.toPort, viaCableId: c.id });
+        neighbors.push({ nodeId: portKey(c.toDevice, c.toPort), deviceId: c.toDevice, portId: c.toPort, vlan: cur.vlan, viaCableId: c.id });
       }
       if (c.toDevice === cur.deviceId && c.toPort === cur.portId) {
-        neighbors.push({ nodeId: portKey(c.fromDevice, c.fromPort), deviceId: c.fromDevice, portId: c.fromPort, viaCableId: c.id });
+        neighbors.push({ nodeId: portKey(c.fromDevice, c.fromPort), deviceId: c.fromDevice, portId: c.fromPort, vlan: cur.vlan, viaCableId: c.id });
       }
     }
     const curDevice = device(cur.deviceId);
@@ -165,25 +203,35 @@ function findL2Path(
         .filter((i) => curDevice.type !== "wirelessRouter" || !i.wan)
         .map((i) => i.id);
       if (curDevice.type === "accessPoint" || curDevice.type === "wirelessRouter") allPorts.push(WIFI_PORT);
+      const active = curDevice.type === "switch" && vlanActive(curDevice);
+      // A frame entering an access port is re-tagged; a trunk keeps the tag.
+      const frameVlan = active
+        ? portIsTrunk(curDevice, cur.portId)
+          ? cur.vlan
+          : portVlan(curDevice, cur.portId)
+        : cur.vlan;
       for (const p of allPorts) {
-        if (p !== cur.portId) neighbors.push({ nodeId: portKey(cur.deviceId, p), deviceId: cur.deviceId, portId: p });
+        if (p !== cur.portId && (!active || portCarriesVlan(curDevice, p, frameVlan))) {
+          neighbors.push({ nodeId: portKey(curDevice.id, p), deviceId: curDevice.id, portId: p, vlan: frameVlan });
+        }
       }
     }
     for (const l of wirelessLinks) {
       if (l.deviceId === cur.deviceId && cur.portId === WIFI_PORT) {
-        neighbors.push({ nodeId: portKey(l.apId, WIFI_PORT), deviceId: l.apId, portId: WIFI_PORT });
+        neighbors.push({ nodeId: portKey(l.apId, WIFI_PORT), deviceId: l.apId, portId: WIFI_PORT, vlan: cur.vlan });
       }
       if (l.apId === cur.deviceId && cur.portId === WIFI_PORT) {
-        neighbors.push({ nodeId: portKey(l.deviceId, WIFI_PORT), deviceId: l.deviceId, portId: WIFI_PORT });
+        neighbors.push({ nodeId: portKey(l.deviceId, WIFI_PORT), deviceId: l.deviceId, portId: WIFI_PORT, vlan: cur.vlan });
       }
     }
 
     for (const nb of neighbors) {
-      if (visited.has(nb.nodeId)) continue;
-      visited.add(nb.nodeId);
-      cameFrom.set(nb.nodeId, { prev: cur.nodeId, viaCableId: nb.viaCableId });
+      const key = nodeKey(nb.nodeId, nb.vlan);
+      if (visited.has(key)) continue;
+      visited.add(key);
+      cameFrom.set(key, { prev: cur.nodeId, viaCableId: nb.viaCableId });
       if (nb.nodeId === goal) {
-        goalKey = nb.nodeId;
+        goalKey = key;
         break;
       }
       queue.push(nb);
@@ -203,11 +251,20 @@ function findL2Path(
   }
   stack.reverse();
   for (let i = 0; i < stack.length; i++) {
-    const [did, pid] = stack[i].split("::");
-    path.push({ deviceId: did, portId: pid });
+    const parts = stack[i].split("::");
+    path.push({ deviceId: parts[0], portId: parts[1] });
     viaCableIds.push(cameFrom.get(stack[i])?.viaCableId);
   }
   return { path, viaCableIds };
+}
+
+/** Whether two ports share a layer-2 segment (same VLAN included). */
+export function sameL2Segment(
+  snap: NetSnapshot,
+  from: { deviceId: string; portId: string },
+  to: { deviceId: string; portId: string }
+): boolean {
+  return findL2Path(snap.devices, snap.cables, snap.wirelessLinks, from, to) !== null;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,8 +289,6 @@ function targetMask(target: Device, portId: string): string {
 export function arpCache(snap: NetSnapshot, deviceId: string): { ip: string; mac: string; deviceId: string; port: string }[] {
   const srcPort = deviceActivePort(snap.devices, deviceId, snap.wirelessLinks);
   if (!srcPort) return [];
-  const find = unionFind(snap.devices, snap.cables, snap.wirelessLinks);
-  const myRoot = find(portKey(deviceId, srcPort));
   const out: { ip: string; mac: string; deviceId: string; port: string }[] = [];
   const seen = new Set<string>();
   for (const d of snap.devices) {
@@ -242,7 +297,7 @@ export function arpCache(snap: NetSnapshot, deviceId: string): { ip: string; mac
     if (!dPort) continue;
     const ip = d.config.interfaces.find((i) => i.ip)?.ip;
     if (!ip) continue;
-    if (find(portKey(d.id, dPort)) !== myRoot) continue;
+    if (!sameL2Segment(snap, { deviceId, portId: srcPort }, { deviceId: d.id, portId: dPort })) continue;
     if (seen.has(ip)) continue;
     seen.add(ip);
     out.push({ ip, mac: d.config.mac, deviceId: d.id, port: dPort });
@@ -585,7 +640,6 @@ export function runPacket(snap: NetSnapshot, run: PacketRun): TraceResult {
     return failure(steps, "Request timed out.", PING_FAULTS.targetIfaceDown(target.id, targetInfo.portId));
   }
 
-  const find = unionFind(devices, cables, wireless);
   const sameNet = isSameNetwork(parseIp(sourceIp)!, sourceMask, targetParsed, targetMask(target, targetInfo.portId));
 
   // ---- Build the leg list: each leg goes from a device out one port to the
@@ -636,7 +690,7 @@ export function runPacket(snap: NetSnapshot, run: PacketRun): TraceResult {
           return failure(steps, "Request timed out.", PING_FAULTS.loop(d.id));
         }
         seenRouters.add(nhInfo.device.id);
-        const outPort = d.config.interfaces.find((i) => i.status === "up" && find(portKey(d.id, i.id)) === find(portKey(nhInfo.device.id, nhInfo.portId)));
+        const outPort = d.config.interfaces.find((i) => i.status === "up" && sameL2Segment(snap, { deviceId: d.id, portId: i.id }, { deviceId: nhInfo.device.id, portId: nhInfo.portId }));
         if (!outPort) {
           steps.push(step(d.id, "L2", "Next hop unreachable", `${label(nhInfo.device)} (${nhIp}) is not reachable at layer 2 from any interface of ${label(d)}.`, "fail"));
           return failure(steps, "Request timed out.", PING_FAULTS.noPath(d.id));
@@ -772,14 +826,11 @@ export function dhcpAssign(snap: NetSnapshot, deviceId: string): DhcpResult {
   const srcPort = deviceActivePort(snap.devices, deviceId, snap.wirelessLinks);
   if (!srcPort) return { ok: false, steps, summary: "Not connected to any network.", error: "Connect the device to a switch (or Wi-Fi) first." };
 
-  const find = unionFind(snap.devices, snap.cables, snap.wirelessLinks);
-  const myRoot = find(portKey(deviceId, srcPort));
-
   const server = snap.devices.find((d) => {
     if (isPoweredOff(d) || !d.dhcpPool || !serviceOn(d, "dhcp")) return false;
     const dPort = deviceActivePort(snap.devices, d.id, snap.wirelessLinks) ?? d.config.interfaces.find((i) => i.status === "up")?.id;
     if (!dPort) return false;
-    return find(portKey(d.id, dPort)) === myRoot;
+    return sameL2Segment(snap, { deviceId, portId: srcPort }, { deviceId: d.id, portId: dPort });
   });
 
   if (!server) {
@@ -900,14 +951,13 @@ export function diagnose(snap: NetSnapshot, sourceId: string, target: string): D
   }
 
   // L2 reachability of the next stop.
-  const find = unionFind(devices, snap.cables, wireless);
   const srcPort = deviceActivePort(devices, source.id, wireless);
   const stopInfo = deviceByIp(devices, nextStop!);
   if (!srcPort || !stopInfo) {
     return { ok: false, step: "reachability", message: `No path from ${label(source)} to ${nextStop}.`, hint: `Wire ${label(source)} into a switch (or join Wi-Fi) and make sure everything is connected.` };
   }
   const stopPort = wireless.some((l) => l.deviceId === stopInfo.device.id) ? WIFI_PORT : stopInfo.portId;
-  if (find(portKey(source.id, srcPort)) !== find(portKey(stopInfo.device.id, stopPort))) {
+  if (!sameL2Segment(snap, { deviceId: source.id, portId: srcPort }, { deviceId: stopInfo.device.id, portId: stopPort })) {
     return { ok: false, step: "reachability", message: `${label(source)} is not on the same network segment as ${nextStop}.`, hint: `Check cables, ports left in "shutdown", and that both devices reach the same switch / access point.` };
   }
 

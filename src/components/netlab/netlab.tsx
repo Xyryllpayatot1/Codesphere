@@ -19,9 +19,10 @@ import { CollabDialog } from "./collab-dialog";
 import { CollabPanel } from "./collab-panel";
 import { LabLevelSelect } from "./lab-level-select";
 import type { LabLevel } from "./lab-levels";
+import type { TemplateName } from "@/lib/net/sim";
 
 export type NetLabInitial = {
-  template?: "empty" | "small-lan" | "two-router" | "wifi" | "internet";
+  template?: "empty" | TemplateName;
   missionSlug?: string | null;
 };
 

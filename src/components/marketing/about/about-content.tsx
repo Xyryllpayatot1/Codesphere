@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// CodeSphere
+// CreyvaPH
 // Educational Technology Platform
 // Created & Led by Jhon Xyryll Samoy
-// © 2026 CodeSphere
+// © 2026 CreyvaPH
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
@@ -26,7 +26,7 @@ export function AboutContent() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[52rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
         <div className="mx-auto max-w-6xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">About CodeSphere</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">About CreyvaPH</p>
           <h1 className="mx-auto mt-4 max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-5xl">
             {BRAND_NAME}
           </h1>
@@ -73,7 +73,7 @@ export function AboutContent() {
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-warning/10 text-warning">
               <HelpCircle className="h-5 w-5" />
             </span>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight">Why CodeSphere exists</h2>
+            <h2 className="mt-4 text-2xl font-bold tracking-tight">Why CreyvaPH exists</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               Too much technical education stays passive — video-only lectures, static reading and theory that
               rarely becomes skill. Many students finish courses knowing facts about code but without the
@@ -135,7 +135,7 @@ export function AboutContent() {
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight">Credits</h2>
             <p className="mt-3 leading-relaxed text-muted-foreground">
-              CodeSphere is a student-driven educational technology project. Full product, creator and
+              CreyvaPH is a student-driven educational technology project. Full product, creator and
               technology credits, including our AI-assisted development disclosure, live on the Credits page.
             </p>
             <Button asChild variant="outline" size="sm" className="mt-4">

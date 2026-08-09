@@ -88,7 +88,7 @@ export function CollabDialog({ open, onOpenChange }: CollabDialogProps) {
       {tab === "create" ? (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            You become the <span className="font-semibold text-foreground">host</span>. Share the room code with anyone on CodeSphere — they can edit together with you.
+            You become the <span className="font-semibold text-foreground">host</span>. Share the room code with anyone on CreyvaPH — they can edit together with you.
           </p>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Room name (optional)</label>

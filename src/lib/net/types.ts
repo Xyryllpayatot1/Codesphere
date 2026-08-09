@@ -39,6 +39,20 @@ export type InterfaceConfig = {
   wan?: boolean;
   /** Description shown in `show interfaces` / config panel. */
   description?: string;
+  /** Access VLAN for switch ports (default 1). */
+  accessVlan?: number;
+  /** Marks a switch port as a trunk — it carries every VLAN. */
+  trunk?: boolean;
+};
+
+/** A VLAN in a switch's VLAN database. The default switch has VLAN 1. */
+export type VlanDef = { id: number; name: string };
+
+/** CLI session state that is persisted on the device for mission verification
+ *  (the current privilege mode lives in the terminal session instead). */
+export type DeviceCliState = {
+  /** The last CLI commands executed on this device (capped, in order). */
+  commands: string[];
 };
 
 export type WlanConfig = {
@@ -107,6 +121,10 @@ export type Device = {
   dnsRecords?: { name: string; ip: string }[];
   /** Running software services (servers/cloud). Missing = every service on. */
   services?: ServerServices;
+  /** VLAN database for switches (id → name). Defaults to VLAN 1 only. */
+  vlans?: VlanDef[];
+  /** Last CLI commands executed on this device (for NOS mission checks). */
+  cli?: DeviceCliState;
 };
 
 export type CableType = "copperStraight" | "copperCrossover" | "fiber" | "serial" | "console";

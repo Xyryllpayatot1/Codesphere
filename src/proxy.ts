@@ -7,7 +7,21 @@ import { ROLES } from "@/lib/constants";
 // signed session cookie. Full verification also happens in layouts/API routes.
 // ---------------------------------------------------------------------------
 
-const PUBLIC_PATHS = ["/login", "/register", "/courses", "/pricing", "/about"];
+// Public pages + SEO endpoints that must be reachable without a session.
+// /credits is a marketing page; /robots.txt + /sitemap.xml must stay open for
+// crawlers; /health + /api/health are used by the hosting provider's probes.
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/courses",
+  "/pricing",
+  "/about",
+  "/credits",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/health",
+  "/api/health",
+];
 const AUTH_API_PREFIX = "/api/auth";
 
 export async function proxy(request: NextRequest) {

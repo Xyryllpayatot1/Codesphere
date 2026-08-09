@@ -1,4 +1,4 @@
-# CodeSphere — System Audit Report
+# CreyvaPH — System Audit Report
 
 - **Date:** 2026-08-09
 - **Scope:** full application audit (auth, courses/learning engine, games, networking lab, collaboration rooms, admin, store, rewards/XP, media, proxy, DB config, mobile/UI)

@@ -1,5 +1,5 @@
 /*
- * CodeSphere
+ * CreyvaPH
  * One-off script: create + publish a "What's New" release summarizing the
  * current feature set. Idempotent for the fixed version string.
  */

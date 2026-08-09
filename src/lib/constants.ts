@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// CodeSphere
+// CreyvaPH
 // Educational Technology Platform
 // Created & Led by Jhon Xyryll Samoy
-// © 2026 CodeSphere
+// © 2026 CreyvaPH
 // ---------------------------------------------------------------------------
 // Platform-wide constants. Strings (not enums) keep the schema provider-portable.
 // ---------------------------------------------------------------------------
@@ -387,7 +387,7 @@ export const MONACO_LANGUAGE = {
   csharp: "csharp",
 } as const;
 
-export const APP_NAME = "CodeSphere";
+export const APP_NAME = "CreyvaPH";
 
 // ---------------------------------------------------------------------------
 // Releases / What's New

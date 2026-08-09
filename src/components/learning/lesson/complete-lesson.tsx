@@ -42,8 +42,8 @@ export function CompleteLessonButton({
         setBlockedReason(null);
       }
     }
-    window.addEventListener("codesphere:progress", onProgress);
-    return () => window.removeEventListener("codesphere:progress", onProgress);
+    window.addEventListener("creyvaph:progress", onProgress);
+    return () => window.removeEventListener("creyvaph:progress", onProgress);
   }, []);
 
   const complete = useCallback(async () => {

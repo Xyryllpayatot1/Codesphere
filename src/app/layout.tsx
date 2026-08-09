@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// CodeSphere
+// CreyvaPH
 // Educational Technology Platform
 // Created & Led by Jhon Xyryll Samoy
-// © 2026 CodeSphere
+// © 2026 CreyvaPH
 // ---------------------------------------------------------------------------
 
 import type { Metadata, Viewport } from "next";
@@ -14,7 +14,8 @@ import { ReactQueryProvider } from "@/components/providers/query-provider";
 import { PwaRegister } from "@/components/providers/pwa-register";
 import { Toaster } from "@/components/ui/toaster";
 import { APP_NAME } from "@/lib/constants";
-import { BRAND_DESCRIPTION } from "@/lib/brand";
+import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE, CREATOR_NAME } from "@/lib/brand";
+import { siteOrigin, siteUrl } from "@/lib/site-url";
 import type { ThemePreference } from "@/store/use-theme";
 
 const geistSans = Geist({
@@ -27,14 +28,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const HOME_TITLE = `${APP_NAME} — Interactive Technology Learning Platform`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin()),
   title: {
-    default: `${APP_NAME} — Learn to Code, Interactively`,
+    default: HOME_TITLE,
     template: `%s · ${APP_NAME}`,
   },
   description: BRAND_DESCRIPTION,
   applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
+  keywords: [
+    "CreyvaPH",
+    "learning platform",
+    "programming",
+    "web development",
+    "networking",
+    "interactive lessons",
+    "hands-on education",
+  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -44,6 +57,51 @@ export const metadata: Metadata = {
     icon: "/icons/icon-192.png",
     apple: "/icons/apple-touch-icon.png",
   },
+  openGraph: {
+    type: "website",
+    siteName: BRAND_NAME,
+    title: HOME_TITLE,
+    description: BRAND_DESCRIPTION,
+    url: siteUrl("/"),
+  },
+  twitter: {
+    card: "summary",
+    title: HOME_TITLE,
+    description: BRAND_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${siteUrl("/")}#organization`,
+      name: BRAND_NAME,
+      description: BRAND_DESCRIPTION,
+      slogan: BRAND_TAGLINE,
+      url: siteUrl("/"),
+      founder: {
+        "@type": "Person",
+        name: CREATOR_NAME,
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${siteUrl("/")}#website`,
+      url: siteUrl("/"),
+      name: BRAND_NAME,
+      description: BRAND_DESCRIPTION,
+      inLanguage: "en",
+      publisher: {
+        "@id": `${siteUrl("/")}#organization`,
+      },
+    },
+  ],
 };
 
 export const viewport: Viewport = {
@@ -60,7 +118,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const store = await cookies();
-  const themeCookie = store.get("codesphere_theme")?.value;
+  const themeCookie = store.get("creyvaph_theme")?.value;
   const initialTheme: ThemePreference =
     themeCookie === "light" || themeCookie === "dark" || themeCookie === "system" ? themeCookie : "system";
 
@@ -71,6 +129,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
         <ThemeProvider initial={initialTheme} />
         <PwaRegister />
         <ReactQueryProvider>

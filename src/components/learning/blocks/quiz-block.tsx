@@ -154,7 +154,7 @@ export function QuizBlock({ quizKey, title }: { quizKey: string; title?: string 
       if (data.passed) {
         toast({ title: "Quiz passed!", description: `Score ${data.percentage}% · +${data.xpEarned} XP`, variant: "success" });
         if (data.levelUp) toast({ title: `Level up — level ${data.levelUp}!`, variant: "level" });
-        window.dispatchEvent(new CustomEvent("codesphere:progress"));
+        window.dispatchEvent(new CustomEvent("creyvaph:progress"));
       } else {
         toast({ title: `Score ${data.percentage}%`, description: `Pass mark is ${quiz.passScore}%. Keep going!`, variant: "info" });
       }

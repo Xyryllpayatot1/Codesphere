@@ -3,11 +3,28 @@
 import { useEffect, useRef, useState } from "react";
 import { Terminal, Lightbulb } from "lucide-react";
 import { useNetlab } from "./netlab-store";
-import { cmdSuggestions } from "@/lib/net/commands";
+import { cmdSuggestions, type CliContext } from "@/lib/net/commands";
+import { DEVICE_TYPES } from "@/lib/net/devices";
 import { cn } from "@/lib/utils";
 
+function iosPrompt(host: string, ctx?: CliContext): string {
+  switch (ctx?.mode) {
+    case "user":
+      return `${host}>`;
+    case "global":
+      return `${host}(config)#`;
+    case "interface":
+      return `${host}(config-if)#`;
+    case "vlan":
+      return `${host}(config-vlan)#`;
+    case "privileged":
+    default:
+      return `${host}#`;
+  }
+}
+
 export function CliTerminal({ deviceId, compact }: { deviceId: string; compact?: boolean }) {
-  const { cmd, openCmd, runCmd, clearCmd, sim } = useNetlab();
+  const { cmd, openCmd, runCmd, clearCmd, sim, cliCtxs } = useNetlab();
   const [value, setValue] = useState("");
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [active, setActive] = useState(0);
@@ -28,7 +45,8 @@ export function CliTerminal({ deviceId, compact }: { deviceId: string; compact?:
   if (!session) return null;
   const device = sim.devices.find((d) => d.id === deviceId);
   const host = device?.config.hostname ?? "device";
-  const prompt = `C:\\Users\\${host}>`;
+  const isIos = !!device && DEVICE_TYPES[device.type].cli;
+  const prompt = isIos ? iosPrompt(host, cliCtxs[deviceId]) : `C:\\Users\\${host}>`;
 
   const suggestions = value.trim() ? cmdSuggestions(sim.netSnapshot(), deviceId, value) : [];
   const highlighted = suggestions[active] ?? suggestions[0];
@@ -89,7 +107,7 @@ export function CliTerminal({ deviceId, compact }: { deviceId: string; compact?:
       <div className="flex items-center gap-2 border-b border-slate-800 bg-[#161b26] px-3 py-1.5">
         <Terminal className="h-3.5 w-3.5 text-sky-400" />
         <span className="font-mono text-[11px] text-slate-300">
-          Command Prompt — {host}
+          {isIos ? `Console — ${host}` : `Command Prompt — ${host}`}
         </span>
         {!compact && (
           <span className="ml-auto text-[10px] text-slate-500">↑ history · Tab complete · Ctrl+L clear</span>

@@ -1,12 +1,13 @@
 "use client";
 
 import { create } from "zustand";
-import { NetworkSimulator, buildTemplate } from "@/lib/net/sim";
+import { NetworkSimulator, buildTemplate, type TemplateName } from "@/lib/net/sim";
 import { buildTopology, type TopologyKey } from "@/lib/net/topology";
 import { getMission, missionStart } from "@/lib/net/missions";
-import { runCommand, type CmdLine } from "@/lib/net/commands";
+import { runCommand, type CliContext, type CmdLine } from "@/lib/net/commands";
 import { cableTip, connectionExplanation, pingFailureExplanation, type TeachingNote } from "@/lib/net/explain";
 import { CABLE_TYPES } from "@/lib/net/types";
+import { DEVICE_TYPES } from "@/lib/net/devices";
 import type { CableType, Device, PacketType, ServerServiceKey, SimSnapshot, TraceResult, WlanConfig } from "@/lib/net/types";
 import { randomMac } from "@/lib/net/ip";
 import { toast } from "@/store/use-toast";
@@ -58,6 +59,8 @@ type NetlabState = {
   diagnosis: { step: string; message: string; hint: string } | null;
   cmd: CmdSession | null;
   cmdLog: CmdLogEntry[];
+  /** Per-device IOS privilege context so multi-step config survives between commands. */
+  cliCtxs: Record<string, CliContext>;
   missionSlug: string | null;
   missionCheck: MissionCheck | null;
   projectId: string | null;
@@ -85,7 +88,7 @@ type NetlabState = {
   refresh: () => void;
   init: (snapshot: SimSnapshot | null, opts?: { projectId?: string | null; title?: string; missionSlug?: string | null }) => void;
   newCanvas: () => void;
-  loadTemplate: (name: "small-lan" | "two-router" | "wifi" | "internet") => void;
+  loadTemplate: (name: TemplateName) => void;
   loadTopology: (name: TopologyKey) => void;
   startMission: (slug: string) => void;
   exitMission: () => void;
@@ -198,6 +201,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
     diagnosis: null,
     cmd: null,
     cmdLog: [],
+    cliCtxs: {},
     missionSlug: null,
     missionCheck: null,
     projectId: null,
@@ -231,6 +235,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
         diagnosis: null,
         cmd: null,
         cmdLog: [],
+        cliCtxs: {},
         missionSlug: opts?.missionSlug ?? null,
         missionCheck: null,
         projectId: opts?.projectId ?? null,
@@ -727,19 +732,25 @@ export const useNetlab = create<NetlabState>((set, get) => {
       if (cmd?.deviceId === deviceId) return;
       const d = sim.devices.find((x) => x.id === deviceId);
       if (!d) return;
-      set((s) => ({
-        ...s,
-        cmd: {
-          deviceId,
-          busy: false,
-          history: [],
-          lines: [
+      const isIos = DEVICE_TYPES[d.type].cli;
+      const host = d.config.hostname ?? "device";
+      const base: CmdSessionLine[] = isIos
+        ? [
+            { text: "Cisco IOS XE, Network Lab Simulator (NSIM)", kind: "out" },
+            { text: "", kind: "out" },
+            { text: `Starting console session on ${host}. Type 'enable' to enter privileged mode.`, kind: "out" },
+            { text: "", kind: "out" },
+          ]
+        : [
             { text: "Microsoft Windows [Version 10.0.22631]", kind: "out" },
             { text: "(c) Network Lab Simulator 2026", kind: "out" },
             { text: "", kind: "out" },
             { text: "Type HELP for a list of commands. Try PING 192.168.1.2 or IPCONFIG /ALL.", kind: "out" },
-          ],
-        },
+          ];
+      set((s) => ({
+        ...s,
+        cmd: { deviceId, busy: false, history: [], lines: base },
+        cliCtxs: isIos ? { ...s.cliCtxs, [deviceId]: s.cliCtxs[deviceId] ?? { mode: "user" } } : s.cliCtxs,
       }));
     },
 
@@ -750,7 +761,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
     clearCmdLog: () => set((s) => ({ ...s, cmdLog: [] })),
 
     runCmd: async (deviceId, raw) => {
-      const { cmd, sim } = get();
+      const { cmd, sim, cliCtxs } = get();
       if (!cmd || cmd.deviceId !== deviceId || cmd.busy) return;
       const trimmed = raw.trim();
       if (!trimmed) return;
@@ -775,9 +786,14 @@ export const useNetlab = create<NetlabState>((set, get) => {
         return;
       }
 
-      const result = runCommand(sim.netSnapshot(), deviceId, trimmed);
+      const result = runCommand(sim.netSnapshot(), deviceId, trimmed, cliCtxs[deviceId]);
       if (result.configSaved) sim.saveStartupConfig(deviceId);
       if (result.device) sim.applyDevice(result.device);
+
+      set((s) => ({
+        ...s,
+        cliCtxs: result.ctx ? { ...s.cliCtxs, [deviceId]: result.ctx } : s.cliCtxs,
+      }));
 
       const dev = sim.devices.find((d) => d.id === deviceId);
       const entry: CmdLogEntry = {

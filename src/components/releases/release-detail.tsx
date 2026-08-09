@@ -52,7 +52,7 @@ export function ReleaseDetail({ release }: { release: ReleaseDetailView }) {
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-md border border-border bg-secondary/60 px-2 py-1 font-mono text-xs font-semibold tracking-wider text-primary">
-            CodeSphere {release.version}
+            CreyvaPH {release.version}
           </span>
           <time className="text-xs text-muted-foreground">{formatDate(release.releaseDate)}</time>
         </div>

@@ -81,7 +81,7 @@ export function SearchDialog() {
         <Search className="h-5 w-5" />
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen} title="Search CodeSphere" description="Courses, lessons, games, missions, projects and achievements.">
+      <Dialog open={open} onOpenChange={setOpen} title="Search CreyvaPH" description="Courses, lessons, games, missions, projects and achievements.">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input

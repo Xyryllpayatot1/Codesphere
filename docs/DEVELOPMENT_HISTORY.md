@@ -1,6 +1,6 @@
-# CodeSphere Development History
+# CreyvaPH Development History
 
-This document records the development history of CodeSphere. It is intended to be **maintained over time** as the project evolves.
+This document records the development history of CreyvaPH (formerly **CodeSphere**). It is intended to be **maintained over time** as the project evolves.
 
 > **Guideline:** only add entries that can be verified from the repository, commit history, or actual project milestones. Do not invent dates or events.
 
@@ -16,7 +16,7 @@ This document records the development history of CodeSphere. It is intended to b
 
 ### Initial concept
 
-- CodeSphere conceived as an educational technology platform: practical programming, web development, networking, and digital technology education.
+- CreyvaPH (formerly CodeSphere) conceived as an educational technology platform: practical programming, web development, networking, and digital technology education.
 - Product identity established (mission, vision, brand).
 
 ### Project architecture
@@ -67,6 +67,11 @@ This document records the development history of CodeSphere. It is intended to b
 
 - Render blueprint (`render.yaml`) with Supabase environment configuration.
 - Switched from SQLite to Postgres adapter; removed SQLite dependencies.
+
+### Rebranding
+
+- Product renamed from **CodeSphere** to **CreyvaPH** across user-visible branding, metadata, and documentation.
+- Identifiers that would reset user data if changed (session cookie, seed account emails, achievement/title keys) were deliberately kept stable; see `BRAND.md`.
 
 ---
 

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Prompt Analyzer — a deterministic, rule-based prompt grader. No AI calls.
 //
-// It checks a prompt for the seven components of the CodeSphere prompt model
+// It checks a prompt for the seven components of the CreyvaPH prompt model
 // (ROLE / TASK / CONTEXT / CONSTRAINTS / EXAMPLES / OUTPUT FORMAT /
 // SUCCESS CRITERIA) and returns a 0–100 score plus per-component feedback.
 //

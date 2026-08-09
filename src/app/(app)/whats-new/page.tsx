@@ -6,8 +6,8 @@ import { ReleaseCard } from "@/components/releases/release-card";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "What's New | CodeSphere",
-  description: "Latest updates and improvements in CodeSphere.",
+  title: "What's New | CreyvaPH",
+  description: "Latest updates and improvements in CreyvaPH.",
 };
 
 export default async function WhatsNewPage() {
@@ -20,8 +20,8 @@ export default async function WhatsNewPage() {
         <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
           <Sparkles className="h-4 w-4" /> What&apos;s new
         </p>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">CodeSphere Updates</h1>
-        <p className="text-sm text-muted-foreground">What&apos;s changed, fixed, and improved across CodeSphere.</p>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">CreyvaPH Updates</h1>
+        <p className="text-sm text-muted-foreground">What&apos;s changed, fixed, and improved across CreyvaPH.</p>
       </header>
 
       {releases.length === 0 ? (

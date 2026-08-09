@@ -165,7 +165,7 @@ export function ExerciseBlock({ exerciseKey, title }: { exerciseKey: string; tit
       if (data.result.passed) {
         toast({ title: "Exercise passed!", description: `+${data.xpEarned} XP`, variant: "success" });
         if (data.levelUp) toast({ title: `Level up — level ${data.levelUp}!`, variant: "level" });
-        window.dispatchEvent(new CustomEvent("codesphere:progress"));
+        window.dispatchEvent(new CustomEvent("creyvaph:progress"));
       }
     } catch {
       toast({ title: "Network error", description: "Could not reach the server", variant: "error" });

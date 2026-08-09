@@ -80,7 +80,7 @@ export default async function CertificatesPage() {
                       {cert.issuedAt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
                     </p>
                     <p className="mt-3 text-xs text-muted-foreground">
-                      CodeSphere Programming Worlds · Verified by certificate ID {cert.code}
+                      CreyvaPH Programming Worlds · Verified by certificate ID {cert.code}
                     </p>
                   </div>
                 ))}
@@ -113,7 +113,7 @@ export default async function CertificatesPage() {
                       {cert.issuedAt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
                     </p>
                     <p className="mt-3 text-xs text-muted-foreground">
-                      CodeSphere · Verified by certificate ID {cert.code}
+                      CreyvaPH · Verified by certificate ID {cert.code}
                     </p>
                   </div>
                 ))}

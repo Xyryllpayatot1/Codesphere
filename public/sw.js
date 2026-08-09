@@ -1,5 +1,5 @@
-/* CodeSphere PWA service worker — static-asset cache-first, navigation network-first. */
-const CACHE = "codesphere-v1";
+/* CreyvaPH PWA service worker — static-asset cache-first, navigation network-first. */
+const CACHE = "creyvaph-v1";
 const PRECACHE = ["/", "/dashboard", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

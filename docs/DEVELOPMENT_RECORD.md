@@ -1,6 +1,8 @@
-# CodeSphere Development Record
+# CreyvaPH Development Record
 
 This file documents how the project's Git history can be used as development evidence, and records the repository's creation and milestones. All dates below are read directly from the repository's commit history.
+
+> **Note:** The project was renamed from **CodeSphere** to **CreyvaPH** after the commits below were recorded. The original commit messages and repository name are preserved as-is because Git history is never rewritten; they reference the former brand.
 
 ## Repository
 
@@ -40,6 +42,7 @@ The commit history provides a verifiable, chronological record of when work was 
 - **Deployment readiness** — Postgres adapter switch, Render blueprint, env-tolerant builds (`88f0927` → `035ee1f`)
 - **Mobile / PWA experience** — bottom nav, learn hub, touch-first Netlab (`35edc8c`, `55d618a`)
 - **Operational tooling** — health endpoints, query parallelization (`d55cf2d`, `f025d84`)
+- **Rebranding** — product renamed from CodeSphere to CreyvaPH (user-visible branding, metadata, documentation)
 
 ## Release versions
 

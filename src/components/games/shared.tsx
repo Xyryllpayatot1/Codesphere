@@ -215,7 +215,7 @@ export function useGameSubmit(gameSlug: string, levelKey: string) {
           });
         }
         if (data.gameCompleted) toast({ title: "Game complete!", description: "You beat every level", variant: "success" });
-        window.dispatchEvent(new CustomEvent("codesphere:progress"));
+        window.dispatchEvent(new CustomEvent("creyvaph:progress"));
       }
     }
     setChecking(false);

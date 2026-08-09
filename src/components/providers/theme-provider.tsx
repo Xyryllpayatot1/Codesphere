@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useThemeStore, type ThemePreference } from "@/store/use-theme";
 
-const THEME_COOKIE = "codesphere_theme";
+const THEME_COOKIE = "creyvaph_theme";
 
 function applyTheme(pref: ThemePreference) {
   const root = document.documentElement;

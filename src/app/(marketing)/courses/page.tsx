@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -6,9 +7,26 @@ import { CourseCard } from "@/components/marketing/course-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BRAND_DESCRIPTION, BRAND_NAME } from "@/lib/brand";
+import { siteUrl } from "@/lib/site-url";
 import { DIFFICULTIES, DIFFICULTY_LABELS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Courses",
+  description: BRAND_DESCRIPTION,
+  alternates: {
+    canonical: "/courses",
+  },
+  openGraph: {
+    type: "website",
+    siteName: BRAND_NAME,
+    title: "Courses · CreyvaPH",
+    description: BRAND_DESCRIPTION,
+    url: siteUrl("/courses"),
+  },
+};
 
 function first(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" ? value : value?.[0];

@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// CodeSphere
+// CreyvaPH
 // Educational Technology Platform
 // Created & Led by Jhon Xyryll Samoy
-// © 2026 CodeSphere
+// © 2026 CreyvaPH
 // ---------------------------------------------------------------------------
 
 import Link from "next/link";
@@ -12,7 +12,7 @@ import { BRAND_FOOTER_LINE, BRAND_NAME, COPYRIGHT_YEAR, CREATOR_NAME } from "@/l
 /**
  * Professional product footer used across both the marketing site and the
  * main application. Attribution is kept subtle — authorship without
- * overpowering the CodeSphere brand.
+ * overpowering the CreyvaPH brand.
  */
 export function Footer() {
   return (
@@ -47,7 +47,7 @@ export function Footer() {
           <ul className="space-y-2 text-sm">
             <li>
               <Link href="/about" className="text-muted-foreground transition hover:text-foreground">
-                About CodeSphere
+                About CreyvaPH
               </Link>
             </li>
             <li>
@@ -60,8 +60,9 @@ export function Footer() {
         <div className="space-y-2 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Ownership</p>
           <p className="text-muted-foreground">
-            © {COPYRIGHT_YEAR} {BRAND_NAME} — {CREATOR_NAME}
+            © {COPYRIGHT_YEAR} {BRAND_NAME}
           </p>
+          <p className="text-xs text-muted-foreground">Created &amp; Led by {CREATOR_NAME}</p>
         </div>
       </div>
     </footer>

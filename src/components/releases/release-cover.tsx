@@ -37,7 +37,7 @@ export function ReleaseCover({
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Sparkles className="h-5 w-5" />
         </span>
-        <span className="text-xs font-semibold tracking-wide text-muted-foreground">CodeSphere Update</span>
+        <span className="text-xs font-semibold tracking-wide text-muted-foreground">CreyvaPH Update</span>
       </div>
     );
   }
@@ -57,5 +57,5 @@ export function ReleaseCover({
 }
 
 export function releaseCoverAlt(version: string, title: string): string {
-  return `CodeSphere v${version} ${title} update`;
+  return `CreyvaPH v${version} ${title} update`;
 }

@@ -1,4 +1,4 @@
-// Generates CodeSphere PWA icons (pure Node, no deps).
+// Generates CreyvaPH PWA icons (pure Node, no deps).
 // Outputs PNGs into public/icons/ + an SVG app icon.
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";

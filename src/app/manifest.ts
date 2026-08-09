@@ -5,8 +5,8 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "CodeSphere — Learn to Code, Interactively",
-    short_name: "CodeSphere",
+    name: "CreyvaPH — Interactive Technology Learning Platform",
+    short_name: "CreyvaPH",
     description: BRAND_DESCRIPTION,
     id: "/",
     start_url: "/dashboard",

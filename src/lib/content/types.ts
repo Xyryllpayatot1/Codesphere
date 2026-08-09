@@ -5,6 +5,8 @@
 // a renderer entry in the registry — lessons themselves are pure data.
 // ---------------------------------------------------------------------------
 
+import type { TemplateName } from "@/lib/net/sim";
+
 export type CalloutVariant = "info" | "tip" | "warning" | "danger";
 
 export type ContentBlock =
@@ -75,7 +77,7 @@ export type ContentBlock =
   | {
       type: "netlab";
       title?: string;
-      template?: "empty" | "small-lan" | "two-router" | "wifi" | "internet";
+      template?: "empty" | TemplateName;
       missionSlug?: string;
     };
 
