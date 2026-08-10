@@ -19,7 +19,7 @@ const PUBLIC_PATHS = [
   "/credits",
   "/robots.txt",
   "/sitemap.xml",
-  "/mysite.xml",
+  "/newsite.xml",
   "/health",
   "/api/health",
 ];
