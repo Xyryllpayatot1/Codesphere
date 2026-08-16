@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/jwt";
 import { ROLES } from "@/lib/constants";
+import { getClientIp, rateLimit, type RateLimitConfig } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Next.js 16 Proxy (the renamed middleware). Guards protected routes using the
@@ -25,6 +26,34 @@ const PUBLIC_PATHS = [
 ];
 const AUTH_API_PREFIX = "/api/auth";
 
+// Per-IP request limits. Generous for normal browsing but cut flood traffic
+// before it reaches routes or the database. Exempted endpoints below stay open.
+const PAGE_LIMIT: RateLimitConfig = { limit: 300, windowMs: 10_000 };
+const API_LIMIT: RateLimitConfig = { limit: 150, windowMs: 10_000 };
+const AUTH_LIMIT: RateLimitConfig = { limit: 10, windowMs: 60_000 };
+const UNRATELIMITED = new Set(["/health", "/api/health"]);
+
+function applyRateLimit(request: NextRequest, pathname: string): NextResponse | null {
+  if (UNRATELIMITED.has(pathname)) return null;
+  const ip = getClientIp(request);
+  const config = pathname.startsWith(AUTH_API_PREFIX)
+    ? AUTH_LIMIT
+    : pathname.startsWith("/api/")
+      ? API_LIMIT
+      : PAGE_LIMIT;
+  const hit = rateLimit(ip, config);
+  if (!hit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.max(1, Math.ceil(hit.retryAfterMs / 1000))) },
+      }
+    );
+  }
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -37,6 +66,9 @@ export async function proxy(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
+
+  const limited = applyRateLimit(request, pathname);
+  if (limited) return limited;
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySessionToken(token) : null;
