@@ -126,3 +126,18 @@ export const getCachedCourseStructure = unstable_cache(
   ["course-structure"],
   { revalidate: COURSE_TTL, tags: LESSON_TAGS }
 );
+
+/** Honest platform totals for the landing page (real published rows only). */
+export const getCachedPlatformStats = unstable_cache(
+  async () => {
+    const [courses, lessons] = await Promise.all([
+      prisma.course.count({ where: { status: "PUBLISHED" } }),
+      prisma.lesson.count({
+        where: { isPublished: true, course: { status: "PUBLISHED" } },
+      }),
+    ]);
+    return { courses, lessons };
+  },
+  ["platform-stats"],
+  { revalidate: COURSE_TTL, tags: COURSE_TAGS }
+);

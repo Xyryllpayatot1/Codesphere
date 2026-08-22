@@ -130,7 +130,7 @@ export function CollabPanel({ code }: PanelProps) {
   }
 
   return (
-    <div className="absolute bottom-24 right-3 top-16 z-40 flex w-[22rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card/95 shadow-2xl backdrop-blur">
+    <div className="absolute inset-x-3 bottom-20 top-24 z-40 flex flex-col overflow-hidden rounded-2xl border border-border bg-card/95 shadow-2xl backdrop-blur lg:inset-x-auto lg:bottom-24 lg:right-3 lg:top-16 lg:w-[22rem]">
       {/* header */}
       <div className="border-b border-border p-3">
         <div className="flex items-center gap-2">

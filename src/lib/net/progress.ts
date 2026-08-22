@@ -132,7 +132,13 @@ function snapshotCounts(snapshot: unknown): { devices: number; cables: number } 
 }
 
 export async function listNetProjects(userId: string): Promise<NetProjectSummary[]> {
-  const rows = await prisma.networkProject.findMany({ where: { userId, isArchived: false }, orderBy: { updatedAt: "desc" } });
+  // Bounded listing — each row carries a full topology snapshot, so an
+  // unbounded findMany would pull megabytes of JSON for large libraries.
+  const rows = await prisma.networkProject.findMany({
+    where: { userId, isArchived: false },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+  });
   return rows.map((p) => ({ id: p.id, title: p.title, missionSlug: p.missionSlug, isArchived: p.isArchived, updatedAt: p.updatedAt, ...snapshotCounts(p.snapshot) }));
 }
 

@@ -204,7 +204,7 @@ export type SimSnapshot = {
   macTables: Record<string, Record<string, string>>;
   /** routerId -> saved config snapshot for `show startup-config`. */
   startupConfigs: Record<string, { hostname: string; interfaces: InterfaceConfig[]; routes: StaticRoute[] }>;
-  /** Laptop ↔ Access Point associations, recomputed whenever devices change. */
+  /** Laptop to access point associations, recomputed whenever devices change. */
   wirelessLinks: WirelessLink[];
 };
 
@@ -256,7 +256,7 @@ export const CABLE_TYPES: Record<CableType, { label: string; short: string; frie
   },
 } as const;
 
-/** Wireless "associations" (laptop ↔ access point) are drawn as dashed links. */
+/** Wireless "associations" (laptop to access point) are drawn as dashed links. */
 export type WirelessLink = {
   id: string;
   deviceId: string;

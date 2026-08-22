@@ -5,6 +5,7 @@ import {
   Cable,
   FlaskConical,
   FolderOpen,
+  History,
   Menu,
   MousePointer2,
   Network,
@@ -30,6 +31,7 @@ import type { DeviceType } from "@/lib/net/types";
 import { CABLE_TYPES } from "@/lib/net/types";
 import { TracePanel } from "./trace-panel";
 import { CableSheet } from "./cable-sheet";
+import { CmdLogList } from "./cmd-log";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +50,7 @@ export function MobileLabBar({
   const [packetOpen, setPacketOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [cableSheetOpen, setCableSheetOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
 
   const onImport = () => {
     const input = document.createElement("input");
@@ -151,15 +154,21 @@ export function MobileLabBar({
         </div>
       </BottomSheet>
 
-      {/* Packet Lab sheet */}
+      {/* Packet Lab sheet — kept below 2/3 viewport so packet animations on
+          the canvas stay visible while sending packets. */}
       <BottomSheet
         open={packetOpen}
         onOpenChange={setPacketOpen}
         title="Packet Lab"
         description="Send packets and diagnose the network, one layer at a time."
-        className="h-[85dvh]"
+        className="h-[62dvh]"
       >
         <TracePanel variant="sheet" />
+      </BottomSheet>
+
+      {/* Activity log sheet (desktop docks this under the canvas) */}
+      <BottomSheet open={logOpen} onOpenChange={setLogOpen} title="Activity log" description="Commands run in device CLIs.">
+        <CmdLogList />
       </BottomSheet>
 
       {/* More sheet */}
@@ -192,6 +201,7 @@ export function MobileLabBar({
               setMoreOpen(false);
             }}
           />
+          <SheetAction icon={<History className="h-4 w-4" />} label="Activity log" onClick={() => { setMoreOpen(false); setLogOpen(true); }} />
           <SheetAction icon={<Layers className="h-4 w-4" />} label="Choose mission…" onClick={() => { setMoreOpen(false); setMissionPickerOpen(true); }} />
         </div>
       </BottomSheet>

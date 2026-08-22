@@ -21,25 +21,25 @@ export const LEARNING_MODE_META: Record<LearningMode, { label: string; short: st
   [LEARNING_MODES.READING]: {
     label: "Reading",
     short: "Read",
-    icon: "📖",
+    icon: "",
     description: "Follow the full concept-first lesson as a guided article.",
   },
   [LEARNING_MODES.VIDEO]: {
     label: "Video",
     short: "Watch",
-    icon: "🎬",
+    icon: "",
     description: "See the visual walkthrough — diagrams, analogies and demos.",
   },
   [LEARNING_MODES.INTERACTIVE]: {
     label: "Interactive",
     short: "Tinker",
-    icon: "🎮",
+    icon: "",
     description: "Jump straight into live demos and hands-on activities.",
   },
   [LEARNING_MODES.PRACTICE]: {
     label: "Practice",
     short: "Practice",
-    icon: "✍️",
+    icon: "",
     description: "Drill the exercises, quizzes and guided challenges.",
   },
 } as const;

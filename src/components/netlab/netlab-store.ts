@@ -428,7 +428,7 @@ export const useNetlab = create<NetlabState>((set, get) => {
       const note = connectionExplanation(from, to, cableType, res.ok, res.error);
       set((s) => ({ ...s, version: s.version + 1, cableFrom: null, dirty: true, learn: note }));
       if (res.ok) {
-        toast({ title: "Connected", description: `${from.config.hostname} ↔ ${to.config.hostname} (${CABLE_TYPES[cableType].label})`, variant: "success" });
+        toast({ title: "Connected", description: `${from.config.hostname} to ${to.config.hostname} (${CABLE_TYPES[cableType].label})`, variant: "success" });
         if (res.cable) {
           get().collabEmitter?.({
             type: "CABLE_CREATED",

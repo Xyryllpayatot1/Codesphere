@@ -19,10 +19,12 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   return (
     <div className="min-h-dvh">
       <Sidebar user={user} open={open} onClose={() => setOpen(false)} />
-      <div className="flex min-h-dvh flex-col lg:pl-64">
+      <div className="flex min-h-dvh flex-col lg:pl-60">
         <Header user={user} onMenuClick={() => setOpen(true)} />
-        <main className="flex-1 px-4 pb-20 pt-6 lg:px-8 lg:pb-6">{children}</main>
-        <div className="pb-[4.5rem] lg:pb-0">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-20 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+          {children}
+        </main>
+        <div className="pb-[4.25rem] lg:pb-0">
           <Footer />
         </div>
       </div>

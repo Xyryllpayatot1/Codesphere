@@ -3,57 +3,96 @@
 /* Class-based dark mode (toggled by the theme store, persisted in a cookie). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---------------------------------------------------------------------------
+ * CreyvaPH design tokens
+ *
+ * Surface hierarchy:
+ *   background   — app canvas
+ *   card         — resting surfaces (cards, panels)
+ *   popover      — raised surfaces (menus, dialogs, popovers)
+ *   sunken       — recessed wells (code blocks, terminal chrome, inputs)
+ *
+ * Every component reads these variables; pages never hardcode colors.
+ * ------------------------------------------------------------------------- */
+
 :root {
-  --background: oklch(0.985 0.002 264);
-  --foreground: oklch(0.21 0.02 264);
+  --background: oklch(0.982 0.0025 264);
+  --foreground: oklch(0.225 0.018 264);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.02 264);
+  --card-foreground: oklch(0.225 0.018 264);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.02 264);
-  --primary: oklch(0.51 0.22 277);
+  --popover-foreground: oklch(0.225 0.018 264);
+  --sunken: oklch(0.958 0.005 264);
+  --sunken-foreground: oklch(0.32 0.02 264);
+
+  --primary: oklch(0.51 0.185 273);
   --primary-foreground: oklch(0.985 0.005 247);
-  --secondary: oklch(0.94 0.012 264);
-  --secondary-foreground: oklch(0.3 0.03 264);
-  --muted: oklch(0.94 0.012 264);
-  --muted-foreground: oklch(0.52 0.025 264);
-  --accent: oklch(0.93 0.03 277);
-  --accent-foreground: oklch(0.3 0.06 277);
-  --destructive: oklch(0.58 0.22 27);
+
+  --secondary: oklch(0.945 0.007 264);
+  --secondary-foreground: oklch(0.3 0.025 264);
+  --muted: oklch(0.945 0.007 264);
+  --muted-foreground: oklch(0.512 0.022 264);
+  --accent: oklch(0.93 0.028 277);
+  --accent-foreground: oklch(0.31 0.07 277);
+
+  --destructive: oklch(0.55 0.21 28);
   --destructive-foreground: oklch(0.985 0.005 247);
-  --success: oklch(0.58 0.17 156);
+  --success: oklch(0.56 0.155 156);
   --success-foreground: oklch(0.985 0.005 247);
-  --warning: oklch(0.7 0.15 70);
+  --warning: oklch(0.68 0.145 70);
   --warning-foreground: oklch(0.25 0.05 70);
-  --border: oklch(0.89 0.012 264);
-  --input: oklch(0.89 0.012 264);
-  --ring: oklch(0.51 0.22 277);
-  --radius: 0.75rem;
+  --info: oklch(0.55 0.14 240);
+  --info-foreground: oklch(0.985 0.005 247);
+
+  --border: oklch(0.905 0.008 264);
+  --border-strong: oklch(0.83 0.012 264);
+  --input: oklch(0.885 0.01 264);
+  --ring: oklch(0.51 0.185 273);
+
+  /* Radius scale — restrained, enterprise feel. */
+  --radius: 0.625rem;
+
+  /* Shadow scale — soft, low-contrast elevation. */
+  --shadow-color: 264 40% 20%;
 }
 
 .dark {
-  --background: oklch(0.16 0.015 264);
-  --foreground: oklch(0.93 0.01 264);
-  --card: oklch(0.2 0.018 264);
-  --card-foreground: oklch(0.93 0.01 264);
-  --popover: oklch(0.2 0.018 264);
-  --popover-foreground: oklch(0.93 0.01 264);
-  --primary: oklch(0.65 0.18 277);
-  --primary-foreground: oklch(0.16 0.02 277);
-  --secondary: oklch(0.25 0.02 264);
-  --secondary-foreground: oklch(0.88 0.01 264);
-  --muted: oklch(0.25 0.02 264);
-  --muted-foreground: oklch(0.65 0.02 264);
-  --accent: oklch(0.28 0.045 277);
+  --background: oklch(0.163 0.012 265);
+  --foreground: oklch(0.928 0.008 264);
+
+  --card: oklch(0.203 0.014 265);
+  --card-foreground: oklch(0.928 0.008 264);
+  --popover: oklch(0.228 0.015 265);
+  --popover-foreground: oklch(0.935 0.008 264);
+  --sunken: oklch(0.182 0.013 265);
+  --sunken-foreground: oklch(0.85 0.01 264);
+
+  --primary: oklch(0.665 0.165 275);
+  --primary-foreground: oklch(0.16 0.03 277);
+
+  --secondary: oklch(0.253 0.017 265);
+  --secondary-foreground: oklch(0.885 0.01 264);
+  --muted: oklch(0.253 0.017 265);
+  --muted-foreground: oklch(0.655 0.017 264);
+  --accent: oklch(0.283 0.04 277);
   --accent-foreground: oklch(0.92 0.03 277);
-  --destructive: oklch(0.62 0.2 25);
+
+  --destructive: oklch(0.63 0.19 27);
   --destructive-foreground: oklch(0.985 0.005 247);
-  --success: oklch(0.62 0.16 156);
+  --success: oklch(0.655 0.15 156);
   --success-foreground: oklch(0.16 0.02 156);
-  --warning: oklch(0.75 0.13 70);
+  --warning: oklch(0.76 0.125 72);
   --warning-foreground: oklch(0.2 0.05 70);
-  --border: oklch(0.3 0.02 264);
-  --input: oklch(0.3 0.02 264);
-  --ring: oklch(0.65 0.18 277);
+  --info: oklch(0.67 0.13 240);
+  --info-foreground: oklch(0.16 0.02 240);
+
+  --border: oklch(0.287 0.015 265);
+  --border-strong: oklch(0.362 0.018 265);
+  --input: oklch(0.305 0.016 265);
+  --ring: oklch(0.665 0.165 275);
+
+  --shadow-color: 264 60% 2%;
 }
 
 @theme inline {
@@ -63,6 +102,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-sunken: var(--sunken);
+  --color-sunken-foreground: var(--sunken-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -77,15 +118,33 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Radius scale (single source: --radius). */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* Typography — official micro sizes replace arbitrary text-[Npx] values. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Elevation — subtle ambient + key shadow, tinted per mode. */
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.05);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.05);
+  --shadow-md: 0 2px 4px hsl(var(--shadow-color) / 0.06), 0 4px 8px -2px hsl(var(--shadow-color) / 0.08);
+  --shadow-lg: 0 4px 8px hsl(var(--shadow-color) / 0.07), 0 12px 24px -6px hsl(var(--shadow-color) / 0.12);
+  --shadow-xl: 0 8px 16px hsl(var(--shadow-color) / 0.1), 0 20px 40px -8px hsl(var(--shadow-color) / 0.18);
 }
 
 html {
@@ -103,6 +162,22 @@ body {
   overflow-x: clip;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+/* Consistent focus treatment for interactive primitives. */
+:focus-visible {
+  outline: none;
+}
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /*
@@ -173,7 +248,6 @@ textarea {
   background: transparent;
 }
 
-/* Fade/slide-in for page transitions (Framer Motion driven) */
 @keyframes shimmer {
   0% {
     background-position: -400px 0;
@@ -228,5 +302,6 @@ textarea {
 
 /* Editor gutter for code blocks */
 .code-block-header {
-  @apply flex items-center justify-between rounded-t-lg border-b border-border bg-muted/60 px-4 py-2 font-mono text-xs text-muted-foreground;
+  @apply flex items-center justify-between rounded-t-lg border-b border-border px-4 py-2 font-mono text-xs text-muted-foreground;
+  background: var(--sunken);
 }

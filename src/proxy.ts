@@ -15,12 +15,13 @@ const PUBLIC_PATHS = [
   "/login",
   "/register",
   "/courses",
-  "/pricing",
   "/about",
   "/credits",
   "/robots.txt",
   "/sitemap.xml",
   "/atom.xml",
+  // PWA surface — must be reachable before sign-in for install prompts.
+  "/manifest.webmanifest",
   "/health",
   "/api/health",
 ];
@@ -61,8 +62,7 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.startsWith("/icons") ||
-    pathname.startsWith("/api/play") // playground code execution is login-free by design
+    pathname.startsWith("/icons")
   ) {
     return NextResponse.next();
   }

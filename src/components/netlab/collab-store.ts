@@ -163,7 +163,7 @@ function activityLabel(e: RoomEvent): string {
     case "DEVICE_UPDATED": return `edited ${host(e.deviceId)}`;
     case "INTERFACE_UPDATED": return `changed ${host(e.deviceId)} interface ${e.portId}`;
     case "DEVICE_POWER_CHANGED": return `${e.poweredOn ? "powered on" : "powered off"} ${host(e.deviceId)}`;
-    case "CABLE_CREATED": return `cabled ${host(e.fromDevice)} ↔ ${host(e.toDevice)}`;
+    case "CABLE_CREATED": return `cabled ${host(e.fromDevice)} to ${host(e.toDevice)}`;
     case "CABLE_REMOVED": return "removed a cable";
     case "WORKSPACE_SYNC": return "loaded a network";
     case "TOPOLOGY_RESET": return "reset the workspace";

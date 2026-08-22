@@ -107,12 +107,11 @@ const jsonLd = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Zoom stays enabled — disabling it fails WCAG 1.4.4 (Resize Text).
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0f0a1e" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0a1e" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#191922" },
   ],
 };
 

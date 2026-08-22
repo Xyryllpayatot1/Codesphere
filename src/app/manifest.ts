@@ -24,7 +24,6 @@ export default function manifest(): MetadataRoute.Manifest {
     shortcuts: [
       { name: "Quick session", url: "/dashboard?quick=1", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
       { name: "Networking Lab", url: "/networking", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
-      { name: "Playground", url: "/playground", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

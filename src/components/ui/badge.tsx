@@ -3,17 +3,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
+  "inline-flex w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium leading-5 transition-colors [&_svg]:size-3 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        outline: "text-foreground",
-        success: "border-transparent bg-success/15 text-success",
-        warning: "border-transparent bg-warning/15 text-warning-foreground dark:text-warning",
-        destructive: "border-transparent bg-destructive/15 text-destructive",
-        accent: "border-transparent bg-accent text-accent-foreground",
+        default: "bg-primary/12 text-primary dark:text-primary",
+        secondary: "bg-secondary text-secondary-foreground",
+        outline: "border border-border text-muted-foreground",
+        success: "bg-success/12 text-success",
+        warning: "bg-warning/15 text-warning-foreground dark:text-warning",
+        destructive: "bg-destructive/12 text-destructive",
+        info: "bg-info/12 text-info",
+        accent: "bg-accent text-accent-foreground",
+        solid: "bg-primary text-primary-foreground",
       },
     },
     defaultVariants: {
@@ -22,10 +24,10 @@ const badgeVariants = cva(
   }
 );
 
-export type BadgeProps = React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof badgeVariants>;
+export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;
 
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
 export { Badge, badgeVariants };

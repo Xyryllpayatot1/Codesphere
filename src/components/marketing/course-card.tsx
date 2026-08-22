@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_LABELS } from "@/lib/constants";
 
@@ -18,32 +17,44 @@ export type CourseCardData = {
 };
 
 export function CourseCard({ course }: { course: CourseCardData }) {
+  const meta = [
+    DIFFICULTY_LABELS[course.difficulty as keyof typeof DIFFICULTY_LABELS] ?? course.difficulty,
+    `${course.estimatedHours} hrs`,
+    `${course.counts.lessons} lessons`,
+    `${course.counts.enrollments} enrolled`,
+  ];
+
   return (
-    <Link href={`/courses/${course.slug}`} className="group block h-full">
-      <Card className="flex h-full flex-col overflow-hidden transition hover:shadow-lg">
-        <div className="h-1.5" style={{ background: course.color }} />
+    <Link href={`/courses/${course.slug}`} className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <article className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors group-hover:border-border-strong">
+        <div className="h-1" style={{ background: course.color }} aria-hidden />
         <div className="flex flex-1 flex-col p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg text-lg" style={{ background: `${course.color}22`, color: course.color }}>
-              {course.icon ?? <BookOpen className="h-5 w-5" />}
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-base"
+              style={{ background: `${course.color}1a`, color: course.color }}
+              aria-hidden
+            >
+              {course.icon ?? <BookOpen className="h-4 w-4" />}
             </span>
             {course.category && <Badge variant="secondary">{course.category.name}</Badge>}
           </div>
-          <h3 className="font-semibold group-hover:text-primary">{course.title}</h3>
-          <p className="mt-1 line-clamp-2 flex-1 text-sm text-muted-foreground">{course.description}</p>
-          <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{DIFFICULTY_LABELS[course.difficulty as keyof typeof DIFFICULTY_LABELS] ?? course.difficulty}</span>
-            <span>·</span>
-            <span>{course.estimatedHours} hrs</span>
-            <span>·</span>
-            <span>{course.counts.modules} modules</span>
-            <span>·</span>
-            <span>{course.counts.lessons} lessons</span>
-            <span>·</span>
-            <span>{course.counts.enrollments} learners</span>
-          </div>
+          <h3 className="text-sm font-semibold tracking-tight transition-colors group-hover:text-primary">
+            {course.title}
+          </h3>
+          <p className="mt-1.5 line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+            {course.description}
+          </p>
+          <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            {meta.map((m, i) => (
+              <span key={i} className="inline-flex items-center gap-2">
+                {i > 0 && <span aria-hidden>·</span>}
+                {m}
+              </span>
+            ))}
+          </p>
         </div>
-      </Card>
+      </article>
     </Link>
   );
 }

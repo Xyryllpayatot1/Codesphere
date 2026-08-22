@@ -71,14 +71,14 @@ export function evaluateCable(
       return {
         ok: false,
         status: "error",
-        error: "Straight-through connects different device classes (PC/router ↔ switch). Two similar devices need a crossover cable.",
+        error: "Straight-through connects different device classes (PC/router to switch). Two similar devices need a crossover cable.",
       };
     }
     if (cableType === "copperCrossover" && dteToDce) {
       return {
         ok: false,
         status: "error",
-        error: "Crossover connects similar devices (PC ↔ PC, switch ↔ switch, PC ↔ router). Different classes need straight-through.",
+        error: "Crossover connects similar devices (PC to PC, switch to switch, PC to router). Different classes need straight-through.",
       };
     }
   }

@@ -117,16 +117,16 @@ export const CONTENT_BLOCK_TYPES = [
 // ---------------------------------------------------------------------------
 
 export const LEARNING_FLOW_PHASES = [
-  { step: 1, title: "Introduction", icon: "👋" },
-  { step: 2, title: "Real-Life Analogy", icon: "🌍" },
-  { step: 3, title: "Why It Matters", icon: "💡" },
-  { step: 4, title: "Visual Explanation", icon: "🔍" },
-  { step: 5, title: "Step-by-Step", icon: "🧭" },
-  { step: 6, title: "Interactive Demonstration", icon: "🎮" },
-  { step: 7, title: "Guided Practice", icon: "🤝" },
-  { step: 8, title: "Explain Every Mistake", icon: "⚠️" },
-  { step: 9, title: "Challenge", icon: "🏆" },
-  { step: 10, title: "Reflection", icon: "🪞" },
+  { step: 1, title: "Introduction", icon: "" },
+  { step: 2, title: "Real-Life Analogy", icon: "" },
+  { step: 3, title: "Why It Matters", icon: "" },
+  { step: 4, title: "Visual Explanation", icon: "" },
+  { step: 5, title: "Step-by-Step", icon: "" },
+  { step: 6, title: "Interactive Demonstration", icon: "" },
+  { step: 7, title: "Guided Practice", icon: "" },
+  { step: 8, title: "Explain Every Mistake", icon: "" },
+  { step: 9, title: "Challenge", icon: "" },
+  { step: 10, title: "Reflection", icon: "" },
 ] as const;
 
 export function learningPhase(step: number) {

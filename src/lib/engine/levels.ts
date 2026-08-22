@@ -15,14 +15,7 @@ export type LevelUnlock = {
 };
 
 const FEATURE_DESCRIPTIONS: Record<string, { title: string; description: string; icon: string }> = {
-  missions: { title: "Daily Missions", description: "Complete daily missions for CodeCoins and XP.", icon: "🎯" },
-  leaderboards: { title: "Leaderboards", description: "Compete on daily, weekly and monthly XP leaderboards.", icon: "🏆" },
-  store: { title: "CodeCoin Store", description: "Spend CodeCoins on profile frames, themes and cosmetics.", icon: "🛍️" },
-  store_rare: { title: "Rare Store Tier", description: "Rare cosmetics become purchasable.", icon: "🔷" },
-  store_epic: { title: "Epic Store Tier", description: "Epic cosmetics become purchasable.", icon: "💜" },
-  store_legendary: { title: "Legendary Store Tier", description: "Legendary cosmetics become purchasable.", icon: "🌟" },
-  store_mythic: { title: "Mythic Store Tier", description: "Mythic cosmetics become purchasable.", icon: "💎" },
-  max_level: { title: "Level Cap", description: "Reach the top of the mountain. You are the myth.", icon: "👑" },
+  max_level: { title: "Level Cap", description: "Reach the top of the mountain. You are the myth.", icon: "" },
 };
 
 /** Every unlockable feature with the level that grants it. */
@@ -57,15 +50,6 @@ export function unlocksAtLevel(level: number): LevelUnlock[] {
 export function nextUnlock(level: number): LevelUnlock | null {
   if (level >= MAX_LEVEL) return null;
   return LEVEL_UNLOCKS.filter((u) => u.level > level).sort((a, b) => a.level - b.level)[0] ?? null;
-}
-
-/** Per-level cosmetic tier check (which store rarities the user may see). */
-export function storeTierForLevel(level: number): { min: string; max: string } {
-  if (level >= FEATURES.STORE_MYTHIC.level) return { min: "COMMON", max: "MYTHIC" };
-  if (level >= FEATURES.STORE_LEGENDARY.level) return { min: "COMMON", max: "LEGENDARY" };
-  if (level >= FEATURES.STORE_EPIC.level) return { min: "COMMON", max: "EPIC" };
-  if (level >= FEATURES.STORE_RARE.level) return { min: "COMMON", max: "RARE" };
-  return { min: "COMMON", max: "COMMON" };
 }
 
 /** Title suggestions earned by level — used to nudge users toward the Title system. */

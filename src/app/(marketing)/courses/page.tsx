@@ -41,34 +41,41 @@ export default async function CoursesPage({ searchParams }: PageProps<"/courses"
 
   const hasFilters = Boolean(q || cat || difficulty) || sort !== "popular";
 
-  // The default listing is stable, public content → served from the data cache.
-  // Filtered/search listings stay dynamic (bounded cache keys, no stale results).
-  const [categories, courses] = hasFilters
-    ? await Promise.all([
-        prisma.category.findMany({
-          include: { _count: { select: { courses: true } } },
-          orderBy: { order: "asc" },
-        }),
-        prisma.course.findMany({
-          where: {
-            status: "PUBLISHED",
-            ...(cat ? { category: { slug: cat } } : {}),
-            ...(difficulty ? { difficulty } : {}),
-            ...(q ? { OR: [{ title: { contains: q } }, { description: { contains: q } }] } : {}),
-          },
-          include: {
-            category: true,
-            _count: { select: { modules: true, lessons: true, enrollments: true } },
-          },
-          orderBy:
-            sort === "title"
-              ? { title: "asc" }
-              : sort === "newest"
-                ? { createdAt: "desc" }
-                : { enrollments: { _count: "desc" } },
-        }),
-      ])
-    : await Promise.all([getCachedCategories(), getCachedCourseListing()]);
+  // Graceful degradation: if the database is unreachable the page still renders
+  // its chrome with an explicit "unavailable" state instead of a raw error.
+  let categories: Awaited<ReturnType<typeof getCachedCategories>> = [];
+  let courses: Awaited<ReturnType<typeof getCachedCourseListing>> = [];
+  let unavailable = false;
+  try {
+    [categories, courses] = hasFilters
+      ? await Promise.all([
+          prisma.category.findMany({
+            include: { _count: { select: { courses: true } } },
+            orderBy: { order: "asc" },
+          }),
+          prisma.course.findMany({
+            where: {
+              status: "PUBLISHED",
+              ...(cat ? { category: { slug: cat } } : {}),
+              ...(difficulty ? { difficulty } : {}),
+              ...(q ? { OR: [{ title: { contains: q } }, { description: { contains: q } }] } : {}),
+            },
+            include: {
+              category: true,
+              _count: { select: { modules: true, lessons: true, enrollments: true } },
+            },
+            orderBy:
+              sort === "title"
+                ? { title: "asc" }
+                : sort === "newest"
+                  ? { createdAt: "desc" }
+                  : { enrollments: { _count: "desc" } },
+          }),
+        ])
+      : await Promise.all([getCachedCategories(), getCachedCourseListing()]);
+  } catch {
+    unavailable = true;
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -131,7 +138,14 @@ export default async function CoursesPage({ searchParams }: PageProps<"/courses"
         )}
       </div>
 
-      {courses.length === 0 ? (
+      {unavailable ? (
+        <div className="rounded-xl border border-dashed border-border py-20 text-center">
+          <p className="text-lg font-medium">Catalog temporarily unavailable</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We couldn&apos;t reach the course catalog. Please try again in a moment.
+          </p>
+        </div>
+      ) : courses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border py-20 text-center">
           <p className="text-lg font-medium">No courses match your filters</p>
           <p className="mt-1 text-sm text-muted-foreground">Try a different search or clear the filters.</p>

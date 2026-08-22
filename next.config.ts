@@ -51,10 +51,6 @@ const nextConfig: NextConfig = {
         source: "/credits",
         headers: [{ key: "Cache-Control", value: PAGE_CACHE }],
       },
-      {
-        source: "/pricing",
-        headers: [{ key: "Cache-Control", value: PAGE_CACHE }],
-      },
     ];
   },
 };

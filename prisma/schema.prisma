@@ -333,6 +333,7 @@ model ProjectSubmission {
   submittedAt DateTime @default(now())
 
   @@index([userId])
+  @@index([projectId])
 }
 
 // ─────────────────────────── ACHIEVEMENTS ──────────────────────────────────

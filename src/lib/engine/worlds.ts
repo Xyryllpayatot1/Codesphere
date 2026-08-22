@@ -427,14 +427,64 @@ export async function buildUnlockContextFor(
 
 // ────────────────────── World unlock lifecycle ──────────────────────────────
 
+/**
+ * courseSlugs → courseIds resolution, TTL-cached. This mapping only changes
+ * when an admin edits world/course content, so a short-lived cache removes
+ * 2 round trips from every mastery update without staleness risk.
+ */
+const courseIdCache = new Map<string, { ids: string[]; expiresAt: number }>();
+const COURSE_ID_TTL_MS = 60_000;
+
+async function worldCourseIds(worldId: string): Promise<string[]> {
+  const cached = courseIdCache.get(worldId);
+  if (cached && cached.expiresAt > Date.now()) return cached.ids;
+  const world = await prisma.world.findUnique({ where: { id: worldId }, select: { courseSlugs: true } });
+  const slugs = (world?.courseSlugs as string[] | null) ?? [];
+  const ids =
+    slugs.length === 0 ? [] : (await prisma.course.findMany({ where: { slug: { in: slugs } }, select: { id: true } })).map((c) => c.id);
+  courseIdCache.set(worldId, { ids, expiresAt: Date.now() + COURSE_ID_TTL_MS });
+  return ids;
+}
+
 /** Creates/updates a user's world progress row and recomputes mastery + status. */
 async function touchWorldProgress(
   userId: string,
   world: { id: string; masteryConfig?: unknown },
-  patch: Partial<WorldProgressState> = {}
+  patch: Partial<WorldProgressState> = {},
+  existingRow?: {
+    status: string;
+    lessonPoints: number;
+    gamePoints: number;
+    quizPoints: number;
+    projectPoints: number;
+    bossPoints: number;
+    practicePoints: number;
+    perfectBonus: number;
+    quizFailMap: unknown;
+    masteredAt: Date | null;
+  } | null
 ): Promise<void> {
-  const existing = await prisma.userWorldProgress.findUnique({ where: { userId_worldId: { userId, worldId: world.id } } });
-  const courseIds = await worldCourseIds(world.id);
+  // The existing row, course IDs and content counts are mutually independent.
+  const [existing, courseIds] = await Promise.all([
+    existingRow !== undefined
+      ? Promise.resolve(existingRow)
+      : prisma.userWorldProgress.findUnique({
+          where: { userId_worldId: { userId, worldId: world.id } },
+          select: {
+            status: true,
+            lessonPoints: true,
+            gamePoints: true,
+            quizPoints: true,
+            projectPoints: true,
+            bossPoints: true,
+            practicePoints: true,
+            perfectBonus: true,
+            quizFailMap: true,
+            masteredAt: true,
+          },
+        }),
+    worldCourseIds(world.id),
+  ]);
   const counts = await worldContentCounts(world.id, courseIds);
   const merged: WorldProgressState = {
     status: existing?.status ?? WORLD_STATUS.UNLOCKED,
@@ -488,67 +538,107 @@ async function touchWorldProgress(
   });
 }
 
-async function worldCourseIds(worldId: string): Promise<string[]> {
-  const world = await prisma.world.findUnique({ where: { id: worldId }, select: { courseSlugs: true } });
-  const slugs = (world?.courseSlugs as string[] | null) ?? [];
-  if (slugs.length === 0) return [];
-  const courses = await prisma.course.findMany({ where: { slug: { in: slugs } }, select: { id: true } });
-  return courses.map((c) => c.id);
-}
-
 async function createMasteryEvent(userId: string, worldId: string, type: string, amount: number, reason: string) {
   await prisma.masteryEvent.create({ data: { userId, worldId, type, amount, reason } });
 }
 
 // ─────────────────────── Record hooks (mastery) ─────────────────────────────
 
+/**
+ * Finds the active worlds linked to a course. The course slug is resolved once
+ * and matched against each world's courseSlugs in memory — one query total,
+ * instead of one `course.findFirst` per world.
+ */
+async function worldsForCourse(courseId: string): Promise<{ world: { id: string; masteryConfig: unknown }; slugs: string[] }[]> {
+  const [course, worlds] = await Promise.all([
+    prisma.course.findUnique({ where: { id: courseId }, select: { slug: true } }),
+    prisma.world.findMany({ where: { isActive: true }, select: { id: true, courseSlugs: true, masteryConfig: true } }),
+  ]);
+  if (!course) return [];
+  const out: { world: { id: string; masteryConfig: unknown }; slugs: string[] }[] = [];
+  for (const w of worlds) {
+    const slugs = (w.courseSlugs as string[]) ?? [];
+    if (slugs.includes(course.slug)) {
+      out.push({ world: { id: w.id, masteryConfig: w.masteryConfig }, slugs });
+    }
+  }
+  return out;
+}
+
 /** Called once when a lesson is first completed. */
 export async function recordWorldLesson(userId: string, courseId: string | null): Promise<void> {
   if (!courseId) return;
-  const worlds = await prisma.world.findMany({ where: { isActive: true } });
-  for (const world of worlds) {
-    const slugs = (world.courseSlugs as string[]) ?? [];
-    if (slugs.length === 0) continue;
-    const linked = await prisma.course.findFirst({ where: { id: courseId, slug: { in: slugs } }, select: { id: true } });
-    if (!linked) continue;
-    const row = await prisma.userWorldProgress.findUnique({ where: { userId_worldId: { userId, worldId: world.id } } });
-    await touchWorldProgress(userId, world, { lessonPoints: (row?.lessonPoints ?? 0) + 1 });
+  const linked = await worldsForCourse(courseId);
+  for (const { world } of linked) {
+    const row = await prisma.userWorldProgress.findUnique({
+      where: { userId_worldId: { userId, worldId: world.id } },
+      select: {
+        status: true,
+        lessonPoints: true,
+        gamePoints: true,
+        quizPoints: true,
+        projectPoints: true,
+        bossPoints: true,
+        practicePoints: true,
+        perfectBonus: true,
+        quizFailMap: true,
+        masteredAt: true,
+      },
+    });
+    await touchWorldProgress(userId, world, { lessonPoints: (row?.lessonPoints ?? 0) + 1 }, row);
     await createMasteryEvent(userId, world.id, MASTERY_EVENT_TYPES.LESSON, worldMasteryConfig(world).lessonWeight, "Lesson completed");
   }
-  await refreshWorldUnlocks(userId);
+  if (linked.length > 0) await refreshWorldUnlocks(userId);
 }
 
 /** Called after every quiz attempt. First passes add mastery; repeated fails decay it. */
 export async function recordWorldQuiz(userId: string, quizId: string, courseId: string | null, passed: boolean, perfect: boolean): Promise<void> {
   if (!courseId) return;
-  const worlds = await prisma.world.findMany({ where: { isActive: true } });
-  const quiz = await prisma.quiz.findUnique({ where: { id: quizId }, select: { id: true, courseId: true } });
-  for (const world of worlds) {
-    const slugs = (world.courseSlugs as string[]) ?? [];
-    if (slugs.length === 0) continue;
-    const linked = quiz && (await prisma.course.findFirst({ where: { id: quiz.courseId ?? "", slug: { in: slugs } }, select: { id: true } }));
-    if (!linked) continue;
-    const row = await prisma.userWorldProgress.findUnique({ where: { userId_worldId: { userId, worldId: world.id } } });
+  const linked = await worldsForCourse(courseId);
+  // Computed once — the caller creates the current attempt before this hook,
+  // so count > 1 means a prior pass already existed.
+  const priorPassCount = passed ? await prisma.quizAttempt.count({ where: { userId, quizId, passed: true } }) : 0;
+
+  for (const { world } of linked) {
+    const row = await prisma.userWorldProgress.findUnique({
+      where: { userId_worldId: { userId, worldId: world.id } },
+      select: {
+        status: true,
+        lessonPoints: true,
+        gamePoints: true,
+        quizPoints: true,
+        projectPoints: true,
+        bossPoints: true,
+        practicePoints: true,
+        perfectBonus: true,
+        quizFailMap: true,
+        masteredAt: true,
+      },
+    });
     const failMap: Record<string, number> = (row?.quizFailMap as Record<string, number> | null) ?? {};
     const cfg = worldMasteryConfig(world);
 
     if (passed) {
-      const alreadyPassed = (await prisma.quizAttempt.count({ where: { userId, quizId, passed: true } })) > 1;
-      if (!alreadyPassed) {
-        await touchWorldProgress(userId, world, {
-          quizPoints: (row?.quizPoints ?? 0) + 1,
-          perfectBonus: (row?.perfectBonus ?? 0) + (perfect ? cfg.perfectQuizBonus : 0),
-          quizFailMap: { ...failMap, [quizId]: 0 },
-        });
+      if (priorPassCount <= 1) {
+        await touchWorldProgress(
+          userId,
+          world,
+          {
+            quizPoints: (row?.quizPoints ?? 0) + 1,
+            perfectBonus: (row?.perfectBonus ?? 0) + (perfect ? cfg.perfectQuizBonus : 0),
+            quizFailMap: { ...failMap, [quizId]: 0 },
+          },
+          row
+        );
         await createMasteryEvent(userId, world.id, MASTERY_EVENT_TYPES.QUIZ, cfg.quizWeight, perfect ? "Perfect quiz" : "Quiz passed");
         if (perfect) await createMasteryEvent(userId, world.id, MASTERY_EVENT_TYPES.QUIZ, cfg.perfectQuizBonus, "Perfect quiz bonus");
       }
     } else {
-      await touchWorldProgress(userId, world, { quizFailMap: { ...failMap, [quizId]: (failMap[quizId] ?? 0) + 1 } });
+      await touchWorldProgress(userId, world, { quizFailMap: { ...failMap, [quizId]: (failMap[quizId] ?? 0) + 1 } }, row);
       await createMasteryEvent(userId, world.id, MASTERY_EVENT_TYPES.QUIZ_FAIL, -cfg.quizFailPenalty, "Quiz retry needed");
     }
   }
-  await refreshWorldUnlocks(userId);
+  if (linked.length > 0) await refreshWorldUnlocks(userId);
 }
 
 /** Called when a mini game is first beaten (perfect runs add a bonus). */
@@ -579,17 +669,27 @@ export async function recordWorldPractice(userId: string): Promise<void> {
 /** Called when a project in a linked course is first approved. */
 export async function recordWorldProject(userId: string, courseId: string | null): Promise<void> {
   if (!courseId) return;
-  const worlds = await prisma.world.findMany({ where: { isActive: true } });
-  for (const world of worlds) {
-    const slugs = (world.courseSlugs as string[]) ?? [];
-    if (slugs.length === 0) continue;
-    const linked = await prisma.course.findFirst({ where: { id: courseId, slug: { in: slugs } }, select: { id: true } });
-    if (!linked) continue;
-    const row = await prisma.userWorldProgress.findUnique({ where: { userId_worldId: { userId, worldId: world.id } } });
-    await touchWorldProgress(userId, world, { projectPoints: (row?.projectPoints ?? 0) + 1 });
+  const linked = await worldsForCourse(courseId);
+  for (const { world } of linked) {
+    const row = await prisma.userWorldProgress.findUnique({
+      where: { userId_worldId: { userId, worldId: world.id } },
+      select: {
+        status: true,
+        lessonPoints: true,
+        gamePoints: true,
+        quizPoints: true,
+        projectPoints: true,
+        bossPoints: true,
+        practicePoints: true,
+        perfectBonus: true,
+        quizFailMap: true,
+        masteredAt: true,
+      },
+    });
+    await touchWorldProgress(userId, world, { projectPoints: (row?.projectPoints ?? 0) + 1 }, row);
     await createMasteryEvent(userId, world.id, MASTERY_EVENT_TYPES.PROJECT, worldMasteryConfig(world).projectWeight, "Project approved");
   }
-  await refreshWorldUnlocks(userId);
+  if (linked.length > 0) await refreshWorldUnlocks(userId);
 }
 
 async function currentActiveWorld(userId: string): Promise<{ id: string; masteryConfig?: unknown } | null> {
@@ -608,7 +708,18 @@ export async function refreshWorldUnlocks(userId: string): Promise<string[]> {
     prisma.userWorldProgress.findMany({ where: { userId }, select: { worldId: true, status: true } }),
   ]);
   const existingMap = new Map(existing.map((e) => [e.worldId, e.status]));
-  const ctx = await buildUnlockContext(userId);
+  const lockedWorlds = worlds.filter((w, i) => {
+    const status = existingMap.get(w.id);
+    return (!status || status === WORLD_STATUS.LOCKED) && (i === 0 || w.unlockCriteria);
+  });
+  if (lockedWorlds.length === 0) return [];
+
+  // Scoped context: only the data groups actually referenced by the locked
+  // worlds' criteria are queried — instead of the full 11-query snapshot.
+  const ctx = await buildUnlockContextFor(
+    userId,
+    lockedWorlds.map((w) => w.unlockCriteria as never)
+  );
   const newlyUnlocked: string[] = [];
 
   for (let i = 0; i < worlds.length; i++) {
@@ -952,7 +1063,9 @@ export async function loadWorldDetail(userId: string, slug: string): Promise<Wor
         progress: { where: { userId }, select: { levelId: true, status: true } },
       },
     }),
-    courseIds.length > 0 ? prisma.quizAttempt.findMany({ where: { quiz: { courseId: { in: courseIds } } }, select: { score: true, maxScore: true } }) : [],
+    // User-scoped (this was previously unscoped — it loaded every user's
+    // attempts for the course) and reduced via aggregate-friendly selects.
+    courseIds.length > 0 ? prisma.quizAttempt.findMany({ where: { userId, quiz: { courseId: { in: courseIds } } }, select: { score: true, maxScore: true } }) : [],
     courseIds.length > 0 ? prisma.lessonProgress.findMany({ where: { userId, lesson: { courseId: { in: courseIds } }, status: "COMPLETED" }, select: { lesson: { select: { courseId: true } } } }) : [],
     prisma.worldCertificate.findMany({ where: { userId, worldId: world.id }, select: { code: true, title: true, issuedAt: true } }),
   ]);

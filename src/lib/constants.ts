@@ -290,42 +290,8 @@ export const RARITY_META: Record<Rarity, { label: string; color: string; ring: s
   MYTHIC: { label: "Mythic", color: "#f472b6", ring: "ring-pink-400/60" },
 };
 
-/** Cosmetic slots. A user's `equipped` JSON maps these keys to StoreItem keys. */
-export const STORE_SLOTS = {
-  PROFILE_FRAME: "profile_frame",
-  AVATAR: "avatar",
-  USERNAME_COLOR: "username_color",
-  THEME: "theme",
-  CURSOR_EFFECT: "cursor_effect",
-  WALLPAPER: "wallpaper",
-  CERTIFICATE_BORDER: "certificate_border",
-  TITLE_CARD: "title_card",
-  ACHIEVEMENT_EFFECT: "achievement_effect",
-} as const;
-
-export type StoreSlot = (typeof STORE_SLOTS)[keyof typeof STORE_SLOTS];
-
-export const STORE_SLOT_META: Record<StoreSlot, { label: string; icon: string }> = {
-  profile_frame: { label: "Profile Frames", icon: "🖼️" },
-  avatar: { label: "Avatars", icon: "🧑‍🚀" },
-  username_color: { label: "Username Colors", icon: "🎨" },
-  theme: { label: "Dashboard Themes", icon: "🌙" },
-  cursor_effect: { label: "Cursor Effects", icon: "✨" },
-  wallpaper: { label: "Wallpapers", icon: "🏞️" },
-  certificate_border: { label: "Certificate Borders", icon: "📜" },
-  title_card: { label: "Title Cards", icon: "🪪" },
-  achievement_effect: { label: "Achievement Effects", icon: "🎉" },
-} as const;
-
-/** Level-gated features. Everything earned through learning — never pay-to-win. */
+/** Level-gated features. */
 export const FEATURES = {
-  MISSIONS: { level: 2, key: "missions" },
-  LEADERBOARDS: { level: 3, key: "leaderboards" },
-  STORE: { level: 5, key: "store" },
-  STORE_RARE: { level: 10, key: "store_rare" },
-  STORE_EPIC: { level: 20, key: "store_epic" },
-  STORE_LEGENDARY: { level: 30, key: "store_legendary" },
-  STORE_MYTHIC: { level: 50, key: "store_mythic" },
   MAX_LEVEL: { level: 100, key: "max_level" },
 } as const;
 
@@ -363,18 +329,7 @@ export const STUDY = {
   PLAN_SLOTS_PER_DAY: 6,
 } as const;
 
-// Supported playground languages (Monaco). Extend without touching app code.
-export const PLAYGROUND_LANGUAGES = [
-  { id: "html", label: "HTML", monaco: "html" },
-  { id: "css", label: "CSS", monaco: "css" },
-  { id: "javascript", label: "JavaScript", monaco: "javascript" },
-  { id: "python", label: "Python", monaco: "python" },
-  { id: "sql", label: "SQL", monaco: "sql" },
-  { id: "java", label: "Java", monaco: "java" },
-  { id: "cpp", label: "C++", monaco: "cpp" },
-  { id: "csharp", label: "C#", monaco: "csharp" },
-] as const;
-
+// Monaco language mapping — used by learning blocks and games.
 export const MONACO_LANGUAGE = {
   html: "html",
   css: "css",

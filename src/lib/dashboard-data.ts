@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { levelFromXp, levelTitle } from "@/lib/engine/xp";
 import { todayKey, fromDateKey } from "@/lib/utils";
-import { isReleaseSeen } from "@/lib/services/releases";
 import { pathById } from "@/lib/onboarding";
 import { TRACKS, trackForCourse } from "@/lib/tracks";
 import type { LatestReleaseView } from "@/components/dashboard/whats-new-card";
@@ -101,75 +100,90 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
 
   const lessonIds = [...new Set(planItems.map((p) => p.lessonId))];
 
-  const [user, settings, stats, activities, sessions, continueItems, lessons, publishedCourses] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, xp: true, streak: true, longestStreak: true } }),
-    prisma.userSetting.findUnique({ where: { userId } }),
-    Promise.all([
-      prisma.lessonProgress.count({ where: { userId, status: "COMPLETED" } }),
-      prisma.enrollment.count({ where: { userId, status: "COMPLETED" } }),
-      prisma.userAchievement.count({ where: { userId } }),
-      prisma.projectSubmission.count({ where: { userId, status: "APPROVED" } }),
-    ]),
-    prisma.activity.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 12,
-      select: {
-        id: true,
-        type: true,
-        createdAt: true,
-        data: true,
-        course: { select: { title: true, slug: true } },
-        lesson: { select: { title: true, slug: true, module: { select: { slug: true } } } },
-      },
-    }),
-    prisma.studySession.findMany({
-      where: { userId, startedAt: { gte: startDay } },
-      select: { startedAt: true, durationSeconds: true },
-    }),
-    prisma.lessonProgress.findMany({
-      where: { userId, status: { not: "COMPLETED" }, progressPercent: { gt: 0 } },
-      orderBy: { lastAccessedAt: "desc" },
-      take: 1,
-      select: {
-        progressPercent: true,
-        lesson: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            module: { select: { slug: true } },
-            course: { select: { slug: true, title: true, color: true } },
+  const [user, settings, stats, activities, sessions, continueItems, lessons, publishedCourses, latestReleaseRow] =
+    await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { name: true, xp: true, streak: true, longestStreak: true } }),
+      prisma.userSetting.findUnique({ where: { userId } }),
+      Promise.all([
+        prisma.lessonProgress.count({ where: { userId, status: "COMPLETED" } }),
+        prisma.enrollment.count({ where: { userId, status: "COMPLETED" } }),
+        prisma.userAchievement.count({ where: { userId } }),
+        prisma.projectSubmission.count({ where: { userId, status: "APPROVED" } }),
+      ]),
+      prisma.activity.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+        select: {
+          id: true,
+          type: true,
+          createdAt: true,
+          data: true,
+          course: { select: { title: true, slug: true } },
+          lesson: { select: { title: true, slug: true, module: { select: { slug: true } } } },
+        },
+      }),
+      prisma.studySession.findMany({
+        where: { userId, startedAt: { gte: startDay } },
+        select: { startedAt: true, durationSeconds: true },
+      }),
+      prisma.lessonProgress.findMany({
+        where: { userId, status: { not: "COMPLETED" }, progressPercent: { gt: 0 } },
+        orderBy: { lastAccessedAt: "desc" },
+        take: 1,
+        select: {
+          progressPercent: true,
+          lesson: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              module: { select: { slug: true } },
+              course: { select: { slug: true, title: true, color: true } },
+            },
           },
         },
-      },
-    }),
-    lessonIds.length > 0
-      ? prisma.lesson.findMany({
-          where: { id: { in: lessonIds } },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            estimatedMinutes: true,
-            module: { select: { slug: true } },
-            course: { select: { slug: true, title: true, color: true } },
-          },
-        })
-      : [],
-    prisma.course.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: [{ order: "asc" }, { title: "asc" }],
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        language: true,
-        category: { select: { slug: true } },
-        enrollments: { where: { userId }, select: { status: true } },
-      },
-    }),
-  ]);
+      }),
+      lessonIds.length > 0
+        ? prisma.lesson.findMany({
+            where: { id: { in: lessonIds } },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              estimatedMinutes: true,
+              module: { select: { slug: true } },
+              course: { select: { slug: true, title: true, color: true } },
+            },
+          })
+        : [],
+      prisma.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: [{ order: "asc" }, { title: "asc" }],
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          language: true,
+          category: { select: { slug: true } },
+          enrollments: { where: { userId }, select: { status: true } },
+        },
+      }),
+      prisma.release.findFirst({
+        where: { isPublished: true },
+        orderBy: { releaseDate: "desc" },
+        select: {
+          id: true,
+          version: true,
+          title: true,
+          summary: true,
+          releaseDate: true,
+          coverImage: { select: { id: true, url: true, filename: true, mimeType: true, size: true } },
+          // "seen" folded into the same round trip via the relation.
+          userViews: { where: { userId }, select: { id: true }, take: 1 },
+        },
+      }),
+    ]);
 
   // ── learning path + track progress + next step ──
   const learningPathId = settings?.learningPath ?? null;
@@ -235,21 +249,8 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     }
   }
 
-  const latestReleaseRow = await prisma.release.findFirst({
-    where: { isPublished: true },
-    orderBy: { releaseDate: "desc" },
-    select: {
-      id: true,
-      version: true,
-      title: true,
-      summary: true,
-      releaseDate: true,
-      coverImage: { select: { id: true, url: true, filename: true, mimeType: true, size: true } },
-    },
-  });
-
   const latestRelease: LatestReleaseView | null = latestReleaseRow
-    ? { ...latestReleaseRow, seen: await isReleaseSeen(userId, latestReleaseRow.id) }
+    ? { ...latestReleaseRow, seen: latestReleaseRow.userViews.length > 0 }
     : null;
 
   const lv = levelFromXp(user?.xp ?? 0);

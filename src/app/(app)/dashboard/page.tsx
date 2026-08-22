@@ -3,11 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { generateStudyPlan } from "@/lib/engine/recommendation";
 import { loadDashboardData } from "@/lib/dashboard-data";
 import { makePerf } from "@/lib/perf";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import type { NetProjectRow } from "@/components/dashboard/mobile-dashboard";
+import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { todayKey, fromDateKey } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+type LabProjectCard = {
+  id: string;
+  title: string;
+  missionSlug: string | null;
+  updatedAt: Date;
+  deviceCount: number;
+};
 
 export default async function DashboardPage() {
   const perf = makePerf("dashboard");
@@ -23,33 +30,33 @@ export default async function DashboardPage() {
   perf("plan/enrollment counts");
 
   if (todayPlanCount === 0 && activeEnrollments > 0) {
-    const settings = await prisma.userSetting.findUnique({ where: { userId } });
+    const settings = await prisma.userSetting.findUnique({ where: { userId }, select: { dailyGoalMinutes: true } });
     await generateStudyPlan(userId, { availableMinutes: settings?.dailyGoalMinutes ?? 30, dateKey: today });
     perf("generateStudyPlan");
   }
 
-  const [data, recentProjects] = await Promise.all([
-    loadDashboardData(userId),
-    prisma.networkProject.findMany({
-      where: { userId, isArchived: false },
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-      select: {
-        id: true,
-        title: true,
-        missionSlug: true,
-        updatedAt: true,
-        snapshot: true,
-      },
-    }),
-  ]);
-  perf("dashboard data + recent projects");
+  // Snapshot JSON blobs are never sent to the client — only a device count,
+  // computed here on the server.
+  const projectRows = await prisma.networkProject.findMany({
+    where: { userId, isArchived: false },
+    orderBy: { updatedAt: "desc" },
+    take: 3,
+    select: { id: true, title: true, missionSlug: true, updatedAt: true, snapshot: true },
+  });
+  const recentProjects: LabProjectCard[] = projectRows.map((p) => {
+    const snapshot = p.snapshot as { devices?: unknown[] } | null;
+    return {
+      id: p.id,
+      title: p.title,
+      missionSlug: p.missionSlug,
+      updatedAt: p.updatedAt,
+      deviceCount: Array.isArray(snapshot?.devices) ? snapshot!.devices!.length : 0,
+    };
+  });
+  perf("recent projects");
 
-  return (
-    <DashboardShell
-      data={data}
-      recentProjects={recentProjects as NetProjectRow[]}
-      recentLessons={data.activities.slice(0, 6)}
-    />
-  );
+  const data = await loadDashboardData(userId);
+  perf("dashboard data");
+
+  return <DashboardView data={data} recentProjects={recentProjects} />;
 }

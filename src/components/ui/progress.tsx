@@ -14,14 +14,14 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
       <div
         ref={ref}
         role="progressbar"
-        aria-valuenow={value}
+        aria-valuenow={Math.round(percent)}
         aria-valuemin={0}
-        aria-valuemax={max}
-        className={cn("h-2 w-full overflow-hidden rounded-full bg-secondary", className)}
+        aria-valuemax={100}
+        className={cn("h-1.5 w-full overflow-hidden rounded-full bg-secondary", className)}
         {...props}
       >
         <div
-          className={cn("h-full rounded-full bg-primary transition-all duration-500", indicatorClassName)}
+          className={cn("h-full rounded-full bg-primary", indicatorClassName)}
           style={{ width: `${percent}%` }}
         />
       </div>

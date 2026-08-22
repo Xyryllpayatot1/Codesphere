@@ -21,9 +21,12 @@ function escapeDisallowedInlineHtml(html: string): string {
 }
 
 export function renderInline(markdown: string): string {
+  const cached = inlineCache.get(markdown);
+  if (cached !== undefined) return cached;
+
   const raw = marked.parseInline(markdown, { async: false }) as string;
   const safe = escapeDisallowedInlineHtml(raw);
-  return sanitizeHtml(safe, {
+  const html = sanitizeHtml(safe, {
     allowedTags: [...ALLOWED_INLINE_TAGS],
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
@@ -35,4 +38,16 @@ export function renderInline(markdown: string): string {
       a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer" }),
     },
   });
+
+  // Bounded memoization: lesson/quiz prose re-renders the same strings on
+  // every state change; parsing + sanitizing each time is pure waste.
+  if (inlineCache.size >= INLINE_CACHE_MAX) {
+    const oldest = inlineCache.keys().next().value;
+    if (oldest !== undefined) inlineCache.delete(oldest);
+  }
+  inlineCache.set(markdown, html);
+  return html;
 }
+
+const INLINE_CACHE_MAX = 600;
+const inlineCache = new Map<string, string>();

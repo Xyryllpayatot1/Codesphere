@@ -129,9 +129,10 @@ function reasonFor(lesson: PlanCandidate, meta: CandidateMeta, availableMinutes:
  * Generates and persists today's study plan.
  * Returns the plan items (in priority order) plus an explanation of the budget.
  */
-export async function generateStudyPlan(userId: string, input: PlanGenerationInput) {
+async function generateStudyPlanInner(userId: string, input: PlanGenerationInput) {
   const { availableMinutes, dateKey } = input;
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  // Only XP is needed — the full User row is large.
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { xp: true } });
   if (!user) throw new Error("User not found");
 
   const userLevel = levelFromXp(user.xp).level;
@@ -165,25 +166,26 @@ export async function generateStudyPlan(userId: string, input: PlanGenerationInp
     orderBy: [{ module: { order: "asc" } }, { order: "asc" }],
   });
 
-  // 3. Learning-history signals
+  // 3. Learning-history signals — bounded to the 14-day window that actually
+  // influences scoring (previously this loaded every failed attempt ever).
+  const historyCutoff = new Date(Date.now() - 14 * 86400000);
   const [failedSubmissions, recentQuizFailures] = await Promise.all([
     prisma.exerciseSubmission.findMany({
-      where: { userId, passed: false },
-      select: { exercise: { select: { lessonId: true } }, submittedAt: true },
+      where: { userId, passed: false, submittedAt: { gte: historyCutoff } },
+      select: { exercise: { select: { lessonId: true } } },
     }),
     prisma.quizAttempt.findMany({
-      where: { userId, passed: false },
-      select: { quiz: { select: { lessonId: true } }, startedAt: true, completedAt: true },
+      where: { userId, passed: false, startedAt: { gte: historyCutoff }, quiz: { lessonId: { not: null } } },
+      select: { quiz: { select: { lessonId: true } } },
     }),
   ]);
 
   const failedLessonIds = new Set<string>();
   for (const s of failedSubmissions) {
-    if (Date.now() - s.submittedAt.getTime() < 14 * 86400000) failedLessonIds.add(s.exercise.lessonId);
+    failedLessonIds.add(s.exercise.lessonId);
   }
   for (const q of recentQuizFailures) {
-    const t = q.completedAt ?? q.startedAt;
-    if (Date.now() - t.getTime() < 14 * 86400000 && q.quiz.lessonId) failedLessonIds.add(q.quiz.lessonId);
+    if (q.quiz.lessonId) failedLessonIds.add(q.quiz.lessonId);
   }
 
   // 4. Build candidates with prerequisite/sequence metadata
@@ -268,16 +270,22 @@ export async function generateStudyPlan(userId: string, input: PlanGenerationInp
   // process dies between the two, the next dashboard load simply regenerates.
   const date = fromDateKey(dateKey);
   await prisma.studyPlanItem.deleteMany({ where: { userId, date } });
-  await prisma.studyPlanItem.createMany({
-    data: plan.map((p) => ({
-      userId,
-      date,
-      lessonId: p.lessonId,
-      reason: p.reason,
-      priority: Math.round(p.score * 10),
-      status: PLAN_ITEM_STATUS.PENDING,
-    })),
-  });
+  try {
+    await prisma.studyPlanItem.createMany({
+      data: [...new Map(plan.map((p) => [p.lessonId, p])).values()].map((p) => ({
+        userId,
+        date,
+        lessonId: p.lessonId,
+        reason: p.reason,
+        priority: Math.round(p.score * 10),
+        status: PLAN_ITEM_STATUS.PENDING,
+      })),
+    });
+  } catch (err) {
+    // A concurrent generation already inserted this user's items (unique on
+    // userId+date+lessonId). Their rows win — treat as success.
+    if ((err as { code?: string })?.code !== "P2002") throw err;
+  }
 
   return {
     plan,
@@ -286,3 +294,26 @@ export async function generateStudyPlan(userId: string, input: PlanGenerationInp
     today: toDateKey(new Date()),
   };
 }
+
+/**
+ * Serializes plan generation per user+date within this process. Two concurrent
+ * dashboard loads can both observe an empty plan and generate simultaneously;
+ * without this gate their delete/insert pairs interleave and violate the
+ * (userId, date, lessonId) unique constraint. Cross-process races degrade
+ * gracefully through the P2002 tolerance above.
+ */
+const inFlight = new Map<string, Promise<StudyPlanResult>>();
+
+export function generateStudyPlan(userId: string, input: PlanGenerationInput): Promise<StudyPlanResult> {
+  const key = `${userId}:${input.dateKey}`;
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+
+  const promise = generateStudyPlanInner(userId, input).finally(() => {
+    inFlight.delete(key);
+  });
+  inFlight.set(key, promise);
+  return promise;
+}
+
+type StudyPlanResult = Awaited<ReturnType<typeof generateStudyPlanInner>>;

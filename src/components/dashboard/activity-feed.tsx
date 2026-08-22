@@ -12,12 +12,12 @@ const ICONS: Record<string, { icon: typeof Zap; className: string }> = {
   [ACTIVITY_TYPES.EXERCISE_COMPLETED]: { icon: BookOpenCheck, className: "bg-primary/10 text-primary" },
   [ACTIVITY_TYPES.QUIZ_PASSED]: { icon: BrainCircuit, className: "bg-primary/10 text-primary" },
   [ACTIVITY_TYPES.QUIZ_FAILED]: { icon: XCircle, className: "bg-destructive/10 text-destructive" },
-  [ACTIVITY_TYPES.ACHIEVEMENT_EARNED]: { icon: Award, className: "bg-amber-500/10 text-amber-600" },
-  [ACTIVITY_TYPES.STREAK_MILESTONE]: { icon: Flame, className: "bg-orange-500/10 text-orange-600" },
-  [ACTIVITY_TYPES.PROJECT_SUBMITTED]: { icon: FolderCheck, className: "bg-indigo-500/10 text-indigo-600" },
-  [ACTIVITY_TYPES.PROJECT_APPROVED]: { icon: FolderCheck, className: "bg-emerald-500/10 text-emerald-600" },
-  [ACTIVITY_TYPES.CERTIFICATE_EARNED]: { icon: GraduationCap, className: "bg-emerald-500/10 text-emerald-600" },
-  [ACTIVITY_TYPES.COURSE_COMPLETED]: { icon: GraduationCap, className: "bg-emerald-500/10 text-emerald-600" },
+  [ACTIVITY_TYPES.ACHIEVEMENT_EARNED]: { icon: Award, className: "bg-warning/12 text-warning-foreground dark:text-warning" },
+  [ACTIVITY_TYPES.STREAK_MILESTONE]: { icon: Flame, className: "bg-warning/12 text-warning-foreground dark:text-warning" },
+  [ACTIVITY_TYPES.PROJECT_SUBMITTED]: { icon: FolderCheck, className: "bg-info/10 text-info" },
+  [ACTIVITY_TYPES.PROJECT_APPROVED]: { icon: FolderCheck, className: "bg-success/10 text-success" },
+  [ACTIVITY_TYPES.CERTIFICATE_EARNED]: { icon: GraduationCap, className: "bg-success/10 text-success" },
+  [ACTIVITY_TYPES.COURSE_COMPLETED]: { icon: GraduationCap, className: "bg-success/10 text-success" },
 };
 
 export function ActivityFeed({ activities }: { activities: DashboardData["activities"] }) {

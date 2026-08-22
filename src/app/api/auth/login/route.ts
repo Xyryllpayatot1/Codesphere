@@ -21,11 +21,20 @@ export async function POST(req: Request) {
 
   const { identifier, password } = parsed.data;
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ email: identifier.toLowerCase() }, { username: identifier }],
-    },
-  });
+  let user = null;
+  try {
+    user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier.toLowerCase() }, { username: identifier }],
+      },
+    });
+  } catch (err) {
+    // Database unreachable (e.g. paused provider project) — say so plainly
+    // instead of a long-hanging generic 500. Log the cause server-side.
+    console.error("[auth/login] database error:", err);
+    return fail("Service temporarily unavailable. Please try again in a moment.", 503);
+  }
+
   if (!user) return fail("Invalid email/username or password", 401);
 
   const valid = await verifyPassword(password, user.passwordHash);

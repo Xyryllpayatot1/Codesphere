@@ -80,8 +80,7 @@ export function TitlesClient({
 
       {owned.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          You have not earned any titles yet. Level up and complete achievements to collect them — or grab one in the{" "}
-          <a href="/store" className="font-medium text-primary hover:underline">store</a>.
+          You have not earned any titles yet. Level up and complete achievements to collect them.
         </p>
       )}
 

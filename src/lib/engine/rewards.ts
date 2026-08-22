@@ -7,8 +7,11 @@
 // COINS: the spendable currency. Earned through learning + level-ups, spent
 //      only in the store (spendCoins). Never purchasable with real money.
 //
-// All side effects (mission progress, title unlocks) happen AFTER the ledger
-// transaction commits so a failed award never leaves a partial ledger row.
+// Concurrency: balances change via SQL-level increments, never read-modify-
+// write, so concurrent awards cannot lose updates. The level-up bonus uses a
+// conditional update (level < newLevel) so exactly one concurrent award claims
+// it. All side effects (mission progress, title unlocks) happen AFTER the
+// ledger transaction commits so a failed award never leaves a partial row.
 // ---------------------------------------------------------------------------
 
 import "server-only";
@@ -60,31 +63,39 @@ export async function awardXp(userId: string, input: XpRewardInput): Promise<XpA
   const coinAmount = Math.floor(input.coins ?? 0);
 
   const outcome = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { xp: true, level: true, coins: true } });
-    if (!user) throw new Error("User not found");
-
-    const newXp = user.xp + amount;
-    const { level, needed, progress } = levelFromXp(newXp);
-    const leveledUp = level > user.level;
-    const gainedLevels = level - user.level;
-
-    let levelUpCoins = 0;
-    if (leveledUp) {
-      for (let l = user.level + 1; l <= level; l++) levelUpCoins += COINS.LEVEL_UP * l;
-    }
-
-    const coinDelta = coinAmount + levelUpCoins;
-    const newCoins = user.coins + coinDelta;
-
-    await tx.user.update({
+    // Single atomic increment — no lost updates under concurrency.
+    const updated = await tx.user.update({
       where: { id: userId },
       data: {
-        xp: newXp,
-        level,
-        coins: newCoins,
-        ...(coinDelta > 0 ? { totalCoinsEarned: { increment: coinDelta } } : {}),
+        xp: { increment: amount },
+        ...(coinAmount > 0
+          ? { coins: { increment: coinAmount }, totalCoinsEarned: { increment: coinAmount } }
+          : {}),
       },
+      select: { xp: true, level: true },
     });
+
+    const { level, needed, progress } = levelFromXp(updated.xp);
+    const gainedLevels = level - updated.level;
+
+    let levelUpCoins = 0;
+    for (let l = updated.level + 1; l <= level; l++) levelUpCoins += COINS.LEVEL_UP * l;
+
+    let claimedLevelUp = false;
+    if (gainedLevels > 0) {
+      // Conditional claim: only the transaction that still sees the old level
+      // applies it — concurrent awards can never double-mint the bonus.
+      const claimed = await tx.user.updateMany({
+        where: { id: userId, level: { lt: level } },
+        data: {
+          level,
+          ...(levelUpCoins > 0
+            ? { coins: { increment: levelUpCoins }, totalCoinsEarned: { increment: levelUpCoins } }
+            : {}),
+        },
+      });
+      claimedLevelUp = claimed.count > 0;
+    }
 
     await tx.xpTransaction.create({
       data: { userId, amount, type: input.type, reason: input.reason, data: (input.data ?? undefined) as never },
@@ -95,18 +106,27 @@ export async function awardXp(userId: string, input: XpRewardInput): Promise<XpA
         data: { userId, amount: coinAmount, type: input.type, reason: input.reason, data: (input.data ?? undefined) as never },
       });
     }
-    if (levelUpCoins > 0) {
+    if (claimedLevelUp && levelUpCoins > 0) {
       await tx.coinTransaction.create({
         data: { userId, amount: levelUpCoins, type: XP_TYPES.LEVEL_UP, reason: `Level ${level} reward`, data: { level, gained: gainedLevels } },
       });
     }
-    if (leveledUp) {
+    if (claimedLevelUp) {
       await tx.activity.create({
         data: { userId, type: ACTIVITY_TYPES.LEVEL_UP, data: { level, gained: gainedLevels, coins: levelUpCoins } },
       });
     }
 
-    return { currentXp: newXp, level, progress, needed, leveledUp, gainedLevels, levelUpCoins };
+    const effectiveLevelUpCoins = claimedLevelUp ? levelUpCoins : 0;
+    return {
+      currentXp: updated.xp,
+      level,
+      leveledUp: claimedLevelUp,
+      gainedLevels: claimedLevelUp ? gainedLevels : 0,
+      levelUpCoins: effectiveLevelUpCoins,
+      progress,
+      needed,
+    };
   });
 
   if (!input.skipMissionProgress) await progressMission(userId, "earn_xp", amount);
@@ -131,17 +151,15 @@ export async function awardCoins(userId: string, input: CoinAwardInput): Promise
   const amount = Math.floor(input.amount);
   if (amount <= 0) return;
 
-  await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { coins: true } });
-    if (!user) throw new Error("User not found");
-    await tx.user.update({
+  await prisma.$transaction([
+    prisma.user.update({
       where: { id: userId },
-      data: { coins: user.coins + amount, totalCoinsEarned: { increment: amount } },
-    });
-    await tx.coinTransaction.create({
+      data: { coins: { increment: amount }, totalCoinsEarned: { increment: amount } },
+    }),
+    prisma.coinTransaction.create({
       data: { userId, amount, type: input.type, reason: input.reason, data: (input.data ?? undefined) as never },
-    });
-  });
+    }),
+  ]);
 }
 
 /** Deducts CodeCoins for a store purchase. Throws when the balance is too low. */
@@ -149,18 +167,21 @@ export async function spendCoins(userId: string, amount: number, reason: string,
   const price = Math.floor(amount);
   if (price <= 0) throw new Error("Invalid amount");
 
-  const result = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { coins: true } });
-    if (!user) throw new Error("User not found");
-    if (user.coins < price) throw new Error("Not enough CodeCoins");
-
-    const balance = user.coins - price;
-    await tx.user.update({ where: { id: userId }, data: { coins: balance } });
-    await tx.coinTransaction.create({
-      data: { userId, amount: -price, type: XP_TYPES.STORE_PURCHASE, reason, data: (data ?? undefined) as never },
-    });
-    return { balance };
+  // Atomic conditional debit: the row is only updated when the balance covers
+  // the price, so concurrent purchases cannot overdraw.
+  const claimed = await prisma.user.updateMany({
+    where: { id: userId, coins: { gte: price } },
+    data: { coins: { decrement: price } },
   });
+  if (claimed.count === 0) {
+    const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!exists) throw new Error("User not found");
+    throw new Error("Not enough CodeCoins");
+  }
 
-  return result;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { coins: true } });
+  await prisma.coinTransaction.create({
+    data: { userId, amount: -price, type: XP_TYPES.STORE_PURCHASE, reason, data: (data ?? undefined) as never },
+  });
+  return { balance: user?.coins ?? 0 };
 }

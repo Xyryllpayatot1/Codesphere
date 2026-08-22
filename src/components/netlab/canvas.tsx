@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Scan } from "lucide-react";
 import { useNetlab } from "./netlab-store";
 import { PALETTE_DRAG_TYPE } from "./palette";
 import { DeviceIcon, deviceColor } from "./device-icon";
@@ -303,6 +303,31 @@ export function Canvas() {
   const zoomIn = () => setZoom(Math.min(2.4, zoom * 1.2));
   const zoomOut = () => setZoom(Math.max(0.4, zoom * 0.833));
 
+  /** Centers and scales the view so every placed device is visible. */
+  const fitView = () => {
+    const el = containerRef.current;
+    if (!el || sim.devices.length === 0) return;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const d of sim.devices) {
+      minX = Math.min(minX, d.x);
+      minY = Math.min(minY, d.y);
+      maxX = Math.max(maxX, d.x + DEVICE_SIZE.width);
+      maxY = Math.max(maxY, d.y + DEVICE_SIZE.height);
+    }
+    const margin = 56;
+    const contentW = maxX - minX + margin * 2;
+    const contentH = maxY - minY + margin * 2;
+    const nextZoom = Math.min(1.1, Math.max(0.4, Math.min(el.clientWidth / contentW, el.clientHeight / contentH)));
+    setZoom(nextZoom);
+    setPan({
+      x: Math.max(12, (el.clientWidth - (maxX - minX) * nextZoom) / 2 - minX * nextZoom),
+      y: Math.max(12, (el.clientHeight - (maxY - minY) * nextZoom) / 2 - minY * nextZoom),
+    });
+  };
+
   const cables = sim.cables;
   const byId = new Map(sim.devices.map((d) => [d.id, d]));
   const activeCables = new Set((trace?.steps ?? []).map((s) => s.cableId).filter((x): x is string => Boolean(x)));
@@ -490,6 +515,14 @@ export function Canvas() {
 
       {/* zoom controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-1 rounded-xl border border-border bg-card/90 p-1 shadow-lg backdrop-blur">
+        <button
+          className="rounded-lg px-2.5 py-1.5 hover:bg-secondary"
+          onClick={fitView}
+          aria-label="Fit network in view"
+          title="Fit network in view"
+        >
+          <Scan className="h-4 w-4" />
+        </button>
         <button className="rounded-lg px-2.5 py-1 text-sm hover:bg-secondary" onClick={zoomIn} aria-label="Zoom in">+</button>
         <span className="text-center text-[10px] text-muted-foreground">{Math.round(zoom * 100)}%</span>
         <button className="rounded-lg px-2.5 py-1 text-sm hover:bg-secondary" onClick={zoomOut} aria-label="Zoom out">−</button>

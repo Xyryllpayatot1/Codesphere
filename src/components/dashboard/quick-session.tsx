@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Code2, Network, Timer, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Network, Timer, Zap } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { DashboardData } from "@/lib/dashboard-data";
 
@@ -21,7 +20,7 @@ function lessonHref(lesson: { courseSlug: string; moduleSlug: string; slug: stri
   return `/learn/${lesson.courseSlug}/${lesson.moduleSlug}/${lesson.slug}`;
 }
 
-/** "You have N minutes" — recommends one lesson, one practice, one mini challenge. */
+/** "You have N minutes" — recommends one lesson, one practice. */
 export function QuickSession({ data }: { data: DashboardData }) {
   const [open, setOpen] = useState(false);
   const [duration, setDuration] = useState<Duration>(5);
@@ -31,47 +30,46 @@ export function QuickSession({ data }: { data: DashboardData }) {
 
   return (
     <>
-      <div
-        className="relative cursor-pointer overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-900 p-5 text-white shadow-lg shadow-violet-900/30 active:scale-[0.99]"
+      <button
+        className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setOpen(true)}
-        role="button"
-        aria-label="Start a quick session"
+        aria-haspopup="dialog"
       >
-        <div className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10 blur-xl" aria-hidden />
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-            <Timer className="h-5 w-5" />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Timer className="h-5 w-5 text-primary" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">Quick session</span>
+          <span className="block text-xs text-muted-foreground">
+            Short on time? Get a {duration}-minute plan.
           </span>
-          <div>
-            <p className="text-sm font-semibold">Quick Session</p>
-            <p className="text-xs text-violet-200">You have a few minutes? Let&apos;s learn.</p>
-          </div>
-          <ArrowRight className="ml-auto h-5 w-5 text-violet-200" />
-        </div>
-        <div className="mt-3 flex gap-1.5">
+        </span>
+        <span className="flex gap-1" aria-hidden>
           {DURATIONS.map((d) => (
             <span
               key={d.value}
               className={cn(
-                "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                duration === d.value ? "bg-white text-violet-700" : "bg-white/15 text-violet-100"
+                "rounded-full px-1.5 py-0.5 text-2xs font-medium",
+                duration === d.value ? "bg-primary/12 text-primary" : "bg-secondary text-muted-foreground"
               )}
             >
-              {d.label}
+              {d.value}m
             </span>
           ))}
-        </div>
-      </div>
+        </span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
 
-      <BottomSheet open={open} onOpenChange={setOpen} title="Quick Session" description="Pick how long you can spare — we'll build your plan.">
+      <BottomSheet open={open} onOpenChange={setOpen} title="Quick session" description="Pick how long you can spare — we'll build your plan.">
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="group" aria-label="Session duration">
             {DURATIONS.map((d) => (
               <button
                 key={d.value}
                 onClick={() => setDuration(d.value)}
+                aria-pressed={duration === d.value}
                 className={cn(
-                  "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition",
+                  "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   duration === d.value
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-background text-muted-foreground hover:bg-secondary"
@@ -92,16 +90,8 @@ export function QuickSession({ data }: { data: DashboardData }) {
               cta="Start lesson"
             />
             <SessionCard
-              icon={<Code2 className="h-4 w-4" />}
-              tag="2 · Practice"
-              title="Code in the playground"
-              sub="Free-form HTML, CSS and JS"
-              href="/playground"
-              cta="Open playground"
-            />
-            <SessionCard
               icon={<Network className="h-4 w-4" />}
-              tag="3 · Mini challenge"
+              tag="2 · Lab"
               title="Networking mini mission"
               sub="Build a LAN and ping across it"
               href="/networking?mission=lan-basics"
@@ -109,8 +99,8 @@ export function QuickSession({ data }: { data: DashboardData }) {
             />
           </div>
 
-          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Zap className="h-3.5 w-3.5 text-primary" />
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Zap className="h-3.5 w-3.5 text-primary" aria-hidden />
             Short sessions build streaks too — every minute counts.
           </p>
         </div>
@@ -140,30 +130,12 @@ function SessionCard({
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tag}</p>
+        <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{tag}</p>
         <p className="truncate text-sm font-medium">{title}</p>
         {sub && <p className="truncate text-xs text-muted-foreground">{sub}</p>}
       </div>
       <Button asChild size="sm" className="shrink-0">
         <Link href={href}>{cta}</Link>
-      </Button>
-    </div>
-  );
-}
-
-/** Compact in-dashboard resume card reused by the mobile home. */
-export function ContinueLearningCard({ lesson, progress }: { lesson: NonNullable<DashboardData["continueItem"]>; progress: number }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Continue learning</p>
-        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <p className="mt-1.5 line-clamp-1 text-base font-semibold">{lesson.title}</p>
-      <p className="line-clamp-1 text-xs text-muted-foreground">{lesson.courseTitle}</p>
-      <Progress value={progress} className="mt-3 h-1.5" />
-      <Button asChild size="sm" className="mt-3 w-full">
-        <Link href={lessonHref(lesson)}>Resume</Link>
       </Button>
     </div>
   );
